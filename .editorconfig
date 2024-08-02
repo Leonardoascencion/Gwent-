@@ -1,0 +1,4 @@
+[*.{cs,vb}]
+
+# IDE0047: Quitar los paréntesis innecesarios
+dotnet_style_parentheses_in_arithmetic_binary_operators = always_for_clarity
