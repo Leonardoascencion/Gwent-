@@ -1,0 +1,15 @@
+D:\Documents\cibernetica real\Programacion\Gwent-\bin\Debug\net7.0\Gwent-.exe
+D:\Documents\cibernetica real\Programacion\Gwent-\bin\Debug\net7.0\Gwent-.deps.json
+D:\Documents\cibernetica real\Programacion\Gwent-\bin\Debug\net7.0\Gwent-.runtimeconfig.json
+D:\Documents\cibernetica real\Programacion\Gwent-\bin\Debug\net7.0\Gwent-.dll
+D:\Documents\cibernetica real\Programacion\Gwent-\bin\Debug\net7.0\Gwent-.pdb
+D:\Documents\cibernetica real\Programacion\Gwent-\obj\Debug\net7.0\Gwent-.csproj.AssemblyReference.cache
+D:\Documents\cibernetica real\Programacion\Gwent-\obj\Debug\net7.0\Gwent-.GeneratedMSBuildEditorConfig.editorconfig
+D:\Documents\cibernetica real\Programacion\Gwent-\obj\Debug\net7.0\Gwent-.AssemblyInfoInputs.cache
+D:\Documents\cibernetica real\Programacion\Gwent-\obj\Debug\net7.0\Gwent-.AssemblyInfo.cs
+D:\Documents\cibernetica real\Programacion\Gwent-\obj\Debug\net7.0\Gwent-.csproj.CoreCompileInputs.cache
+D:\Documents\cibernetica real\Programacion\Gwent-\obj\Debug\net7.0\Gwent-.dll
+D:\Documents\cibernetica real\Programacion\Gwent-\obj\Debug\net7.0\refint\Gwent-.dll
+D:\Documents\cibernetica real\Programacion\Gwent-\obj\Debug\net7.0\Gwent-.pdb
+D:\Documents\cibernetica real\Programacion\Gwent-\obj\Debug\net7.0\Gwent-.genruntimeconfig.cache
+D:\Documents\cibernetica real\Programacion\Gwent-\obj\Debug\net7.0\ref\Gwent-.dll
