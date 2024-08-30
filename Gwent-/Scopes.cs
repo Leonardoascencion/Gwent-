@@ -2,11 +2,11 @@
 /// <summary>
 /// Represents all the effects defined at the moment
 /// </summary>
-public class EffectScope
+public static class EffectScope
 {
     public static Dictionary<string, Effect> Effects { get; } = new();
 
-    public void AddEffect(string name, Effect newOne) => Effects.Add(name, newOne);
+    public static void AddEffect(string name, Effect newOne) => Effects.Add(name, newOne);
 }
 
 /// <summary>
@@ -17,7 +17,7 @@ public class CardScope
 {
     public static Dictionary<string, Card> Cards { get; } = new();
 
-    public void AddCard(string name, Card newOne) => Cards.Add(name, newOne);
+    public static void AddCard(string name, Card newOne) => Cards.Add(name, newOne);
 }
 
 /// <summary>

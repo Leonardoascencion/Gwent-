@@ -29,7 +29,7 @@ public class Lexer
     /// </summary>
     public void EspecialCases()
     {
-        Regex match = new(@"[ \s () {} + - * / % ^ ; , : < > = | & ! $ ' "" \n ]"); // no me detecta los []
+        Regex match = new(@"[ \s () {} + - * / % ^ ; . , : < > = | & ! $ ' "" \n ]"); // no me detecta los []
         MatchCollection TheMatch = match.Matches(Source);
 
         for (int i = 0; i < TheMatch.Count; i++)
@@ -108,8 +108,8 @@ public class Lexer
                 Tokens.Add(new Token(TokenType.Faction, CurrentWord));
                 break;
 
-            case "Attack":
-                Tokens.Add(new Token(TokenType.Attack, CurrentWord));
+            case "Power":
+                Tokens.Add(new Token(TokenType.Power, CurrentWord));
                 break;
 
             case "Range":
@@ -414,12 +414,16 @@ public class Lexer
                 Tokens.Add(new Token(TokenType.Number, CurrentWord));
                 break;
 
+            case "bool":
+                Tokens.Add(new Token(TokenType.Boolean, CurrentWord));
+                break;
+
             case "Id":
                 Tokens.Add(new Token(TokenType.Id, CurrentWord));
                 break;
 
-            case "bool":
-                Tokens.Add(new Token(TokenType.Boolean, CurrentWord));
+            case "string":
+                Tokens.Add(new Token(TokenType.String, CurrentWord));
                 break;
 
             case string NumberType when double.TryParse(NumberType, out _): // case of a number
@@ -427,7 +431,6 @@ public class Lexer
                 break;
 
             case " ":
-                Tokens.Add(new Token(TokenType.Whitespace, CurrentWord));
                 break;
 
             case "\n":
@@ -436,6 +439,10 @@ public class Lexer
 
             case "EOF":
                 Tokens.Add(new Token(TokenType.EOF, CurrentWord));
+                break;
+
+            case "targets":
+                Tokens.Add(new Token(TokenType.Variable, CurrentWord));
                 break;
 
             default:
@@ -458,6 +465,6 @@ public class Lexer
             Value += Source[start];
             start++;
         }
-        Tokens.Add(new Token(TokenType.Word, Value));
+        Tokens.Add(new Token(TokenType.WordValue, Value));
     }
 }

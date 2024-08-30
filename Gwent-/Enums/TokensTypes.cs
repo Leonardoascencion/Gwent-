@@ -2,19 +2,16 @@ public enum TokenType
 {
 
     LineChange, // JumpLine
-    Whitespace, // JumpHollow
 
     //Keywords
-
     Effect, // Effect
     Card, // Card
     Name, // Name 
     Params, // Params
-    Amount, // Amount        
     Action, // Action 
     Type, // Type 
     Faction, // Faction 
-    Attack, // Attack 
+    Power, // Attack 
     Range, // Range 
     OnActivation, // OnActivation 
     Selector, // Selector 
@@ -26,7 +23,11 @@ public enum TokenType
     Hand, // hand 
     Deck, // deck 
     Board, // board 
-    Context, // context 
+    Context, // context
+    NumberValue, // NumberValue (when find a number)
+    WordValue, // WordValue (when find a word between "")
+
+    //Especial methods 
     TriggerPlayer, // TriggerPlayer 
     Find, // Find 
     Push, // Push 
@@ -35,30 +36,33 @@ public enum TokenType
     Remove, // Remove 
     Shuffle, // Shuffle 
     Owner, //Owner 
-    NumberValue, // NumberValue
+
+    //Actions
+    For, // for
+    While, // while
+    If, // if
+    Else, // else
+
 
     //Boolean
     True, // true 
     False, // false 
-    For, // for
-    While, // while
-    If, // if
-    ElIf, // elif
-    Else, // else
     Not, // ! 
     And, // &&
     Or, // ||
 
     //Operator
+    //Matemathic
     Pow, //^
-    PlusEqual, //+= 
-    MinusEqual, //-= 
-    Increment, //++
-    Decrement, //--
     Plus, //+
     Minus, //-
     Multiply, //*
     Divide, ///
+    Increment, //++
+    Decrement, //--
+    //Logical
+    PlusEqual, //+= 
+    MinusEqual, //-= 
     Equal, //==
     Less, //<
     LessEq, // <=
@@ -71,24 +75,24 @@ public enum TokenType
     SpaceConcatenation, //@@ include the white spaces
     Concatenation, //@
     Assign, //=
-    Colon, //: 
     Comma, //, 
+    Colon, //: 
     Semicolon, //; 
     Arrow,    // => 
     LParen,   // (
     RParen,   // )
     LBracket, // [
     RBracket, // ]
-    LCurly,   //{
-    RCurly,   //}
+    LCurly,   // {
+    RCurly,   // }
 
-    //Identifier
+    //Identifier declarators
     Number,  // Int
-    Word,  // String beteween " "
-    Id,      // Ide
+    String,  // String beteween " "
     Boolean, // bool
+    Id,      // Id
     Variable, // Any Combination of Letter and Number(Number First dont)
 
-    EOF      //End of file(source)
+    EOF      //End of file(of the source)
 
 }
