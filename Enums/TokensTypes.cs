@@ -2,19 +2,16 @@ public enum TokenType
 {
 
     LineChange, // JumpLine
-    Whitespace, // JumpHollow
 
     //Keywords
-
     Effect, // Effect
     Card, // Card
     Name, // Name 
     Params, // Params
-    Amount, // Amount        
     Action, // Action 
     Type, // Type 
     Faction, // Faction 
-    Attack, // Attack 
+    Power, // Attack 
     Range, // Range 
     OnActivation, // OnActivation 
     Selector, // Selector 
@@ -26,7 +23,12 @@ public enum TokenType
     Hand, // hand 
     Deck, // deck 
     Board, // board 
-    Context, // context 
+    Context, // context
+    NumberValue, // NumberValue (when find a number)
+    WordValue, // WordValue (when find a word between "")
+    BoleanValue, // Bool Value (when find true or false)
+
+    //Especial methods 
     TriggerPlayer, // TriggerPlayer 
     Find, // Find 
     Push, // Push 
@@ -35,31 +37,31 @@ public enum TokenType
     Remove, // Remove 
     Shuffle, // Shuffle 
     Owner, //Owner 
-    NumberValue, // NumberValue
-    StringValue, // StringValue
 
-    //Boolean
-    True, // true 
-    False, // false 
+    //Actions
     For, // for
     While, // while
     If, // if
-    ElIf, // elif
     Else, // else
+
+
+    //Boolean
     Not, // ! 
     And, // &&
     Or, // ||
 
     //Operator
+    //Matemathic
     Pow, //^
-    PlusEqual, //+= 
-    MinusEqual, //-= 
-    Increment, //++
-    Decrement, //--
     Plus, //+
     Minus, //-
     Multiply, //*
     Divide, ///
+    Increment, //++
+    Decrement, //--
+    //Logical
+    PlusEqual, //+= //creo q esto no lo voy a usar
+    MinusEqual, //-= // creo q esto no lo voy a usar
     Equal, //==
     Less, //<
     LessEq, // <=
@@ -69,25 +71,28 @@ public enum TokenType
 
 
     //Symbol
-    SpaceConcatenation, //$$
-    Concatenation, //$
+    SpaceConcatenation, //@@ include the white spaces
+    Concatenation, //@
     Assign, //=
-    Colon, //: 
+    Point, //.
     Comma, //, 
+    Colon, //: 
     Semicolon, //; 
     Arrow,    // => 
     LParen,   // (
     RParen,   // )
     LBracket, // [
     RBracket, // ]
-    LCurly,   //{
-    RCurly,   //}
+    LCurly,   // {
+    RCurly,   // }
 
-    //Identifier
+    //Identifier declarators
     Number,  // Int
-    Words,  // String
-    Id,      // Id number
-    Boolean, // bool
+    String,  // String beteween " "
+    Bool, // bool
+    Id,      // Id
     Variable, // Any Combination of Letter and Number(Number First dont)
+
+    EOF      //End of file(of the source)
 
 }

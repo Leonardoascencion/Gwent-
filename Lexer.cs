@@ -1,57 +1,90 @@
 using System.Formats.Asn1;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using TokenClass;
+
+/// <summary>
+/// The class that creates the list of tokens to the phase of the parser who make the AST(syntax tree)
+/// </summary>
+/// </return>
+/// One time create return the list of tokens of the source code 
+/// </return>
 public class Lexer
 {
-    public readonly string Source;
-    public static List<Token> Tokens = new();
-    string CurrentWord { get; set; } = string.Empty;
-    bool Error { get; set; } = false;
-    public int StateOfLexer; //where is the current baner of the lexer
-    public int XPostion;
-    public int YPostion;
+    public readonly string Source; // source of the code
+    private string CurrentWord { get; set; } = string.Empty; // will manage the way that the token will be add to the list
+    private int CurrentPosition { get; set; } = 0; // will manage how will travel the source
+
+    public static List<Token> Tokens = new(); // the list of tokens(the only thing that matters of the )
+    public static bool LexerError { get; set; } = false; // will say if it is an error of writting(will continue the code but the next fase need this propety be equal to false)
 
     public Lexer(string source)
     {
-        Source = source + " ";
+        Source = source + " " + "EOF";
         EspecialCases();
     }
 
-
+    /// <summary>
+    /// The manager who execute the tokeny 
+    /// </summary>
     public void EspecialCases()
     {
-        int start = 0;
-        Regex match = new(@"[ \s () {} + - * / % ^ ; , : < > = | & ! $ ' "" \n]"); // no me detecta los []
+        Regex match = new(@"[ \s () {} + - * / % ^ ; . , : < > = | & ! $ ' "" \n ]"); // no me detecta los []
         MatchCollection TheMatch = match.Matches(Source);
 
         for (int i = 0; i < TheMatch.Count; i++)
         {
-            Tokeny(start, TheMatch[i].Index);
+            if (TheMatch[i].Index < CurrentPosition)
+                continue;
 
-            start = TheMatch[i].Index;
-            Tokeny(start, TheMatch[i].Index);
+            if (TheMatch[i].Value.Contains('"'))
+            {
+                for (int j = i + 1; j < TheMatch.Count; j++)
+                {
+                    if (TheMatch[j].Value.Contains('"'))
+                    {
+                        EspecialTokeny(TheMatch[i].Index + 1, j);
+                        break;
+                    }
 
-            start++;
+                    if (j == TheMatch.Count || TheMatch[j].Value == "\n")
+                        LexerError = true;
+                    i++;
+                }
+                CurrentPosition = TheMatch[i].Index;
+                continue;
+            }
 
+
+            Tokeny(TheMatch[i].Index);
+
+            CurrentPosition = TheMatch[i].Index;
+            Tokeny(TheMatch[i].Index);
+
+            CurrentPosition++;
         }
     }
 
 
-    public void Tokeny(int start, int end)
+    /// <summary>
+    /// The Tokenyzer with all the cases except the words case
+    /// Start in the CurrentPosition in the source and from that position to the end - 1 saves that word and later compare with the possible cases
+    /// </summary>
+    public void Tokeny(int end)
     {
-        CurrentWord = Source[start].ToString();
-        for (int i = start + 1; i < end; i++)
+        CurrentWord = Source[CurrentPosition].ToString();
+        for (int j = CurrentPosition + 1; j < end - 1; j++)
         {
-            CurrentWord += Source[i];
+            CurrentWord += Source[j];
         }
 
         switch (CurrentWord)
         {
-            case "Effect":
+            case "effect":
                 Tokens.Add(new Token(TokenType.Effect, CurrentWord));
                 break;
 
-            case "Card":
+            case "card":
                 Tokens.Add(new Token(TokenType.Card, CurrentWord));
                 break;
 
@@ -75,8 +108,8 @@ public class Lexer
                 Tokens.Add(new Token(TokenType.Faction, CurrentWord));
                 break;
 
-            case "Attack":
-                Tokens.Add(new Token(TokenType.Attack, CurrentWord));
+            case "Power":
+                Tokens.Add(new Token(TokenType.Power, CurrentWord));
                 break;
 
             case "Range":
@@ -159,21 +192,11 @@ public class Lexer
                 Tokens.Add(new Token(TokenType.Owner, CurrentWord));
                 break;
 
-            case "NumberType":
-                Tokens.Add(new Token(TokenType.Effect, CurrentWord));
-                break;
-
-            case "StringType":
-                Tokens.Add(new Token(TokenType.StringValue, CurrentWord));
-                break;
-
             case "true":
-                Tokens.Add(new Token(TokenType.True, CurrentWord));
+            case "false":
+                Tokens.Add(new Token(TokenType.BoleanValue, CurrentWord));
                 break;
 
-            case "false":
-                Tokens.Add(new Token(TokenType.False, CurrentWord));
-                break;
 
             case "for":
                 Tokens.Add(new Token(TokenType.For, CurrentWord));
@@ -196,27 +219,30 @@ public class Lexer
                 break;
 
             case "&":
-                switch (Source[start++])
+                switch (Source[CurrentPosition++])
                 {
                     case '&':
+                        CurrentWord += Source[CurrentPosition++];
                         Tokens.Add(new Token(TokenType.And, CurrentWord));
-                        start = end++;
                         end++;
+                        CurrentPosition = end;
                         break;
 
                     default:
-                        Error = true;
+                        LexerError = true;
                         break;
                 }
                 break;
 
             case "|":
-                switch (Source[start++])
+                CurrentPosition++;
+                switch (Source[CurrentPosition])
                 {
                     case '|':
+                        CurrentWord += Source[CurrentPosition];
                         Tokens.Add(new Token(TokenType.Or, CurrentWord));
-                        start = end++; //tiene q sumar 2 en vez de 1
                         end++;
+                        CurrentPosition = end;
                         break;
 
                     default:
@@ -229,17 +255,20 @@ public class Lexer
                 break;
 
             case "+":
-                switch (Source[start + 1])
+                switch (Source[CurrentPosition + 1])
                 {
                     case '+':
+                        CurrentWord += Source[CurrentPosition++];
                         Tokens.Add(new Token(TokenType.Increment, CurrentWord));
-                        start = end++;
                         end++;
+                        CurrentPosition = end;
                         break;
+
                     case '=':
+                        CurrentWord += Source[CurrentPosition++];
                         Tokens.Add(new Token(TokenType.PlusEqual, CurrentWord));
-                        start = end++;
                         end++;
+                        CurrentPosition = end;
                         break;
                     default:
                         Tokens.Add(new Token(TokenType.Plus, CurrentWord));
@@ -248,19 +277,21 @@ public class Lexer
                 break;
 
             case "-":
-                switch (Source[start + 1])
+                switch (Source[CurrentPosition + 1])
                 {
 
                     case '=':
+                        CurrentWord += Source[CurrentPosition++];
                         Tokens.Add(new Token(TokenType.MinusEqual, CurrentWord));
-                        start = end++;
                         end++;
+                        CurrentPosition = end;
                         break;
 
                     case '-':
+                        CurrentWord += Source[CurrentPosition++];
                         Tokens.Add(new Token(TokenType.Decrement, CurrentWord));
-                        start = end++;
                         end++;
+                        CurrentPosition = end;
                         break;
 
                     default:
@@ -278,18 +309,20 @@ public class Lexer
                 break;
 
             case "=":
-                switch (Source[start++])
+                switch (Source[CurrentPosition++])
                 {
                     case '=':
-                        start = end++;
-                        end++;
+                        CurrentWord += Source[CurrentPosition++];
                         Tokens.Add(new Token(TokenType.Equal, CurrentWord));
+                        end++;
+                        CurrentPosition = end;
                         break;
 
                     case '>':
+                        CurrentWord += Source[CurrentPosition++];
                         Tokens.Add(new Token(TokenType.Arrow, CurrentWord));
-                        start = end++;
                         end++;
+                        CurrentPosition = end;
                         break;
 
                     default:
@@ -300,12 +333,13 @@ public class Lexer
 
 
             case "<":
-                switch (Source[start++])
+                switch (Source[CurrentPosition++])
                 {
                     case '=':
+                        CurrentWord += Source[CurrentPosition++];
                         Tokens.Add(new Token(TokenType.LessEq, CurrentWord));
-                        start = end++;
                         end++;
+                        CurrentPosition = end;
                         break;
 
                     default:
@@ -315,12 +349,13 @@ public class Lexer
                 break;
 
             case ">":
-                switch (Source[start++])
+                switch (Source[CurrentPosition++])
                 {
                     case '=':
+                        CurrentWord += Source[CurrentPosition++];
                         Tokens.Add(new Token(TokenType.MoreEq, CurrentWord));
-                        start = end++;
                         end++;
+                        CurrentPosition = end;
                         break;
                     default:
                         Tokens.Add(new Token(TokenType.More, CurrentWord));
@@ -328,26 +363,30 @@ public class Lexer
                 }
                 break;
 
-            case "$":
-                if (Source[start + 1] == '$')
+            case "@":
+                if (Source[CurrentPosition + 1] == '@')
+                {
+                    CurrentWord += Source[CurrentPosition++];
                     Tokens.Add(new Token(TokenType.SpaceConcatenation, CurrentWord));
+                }
                 else
                     Tokens.Add(new Token(TokenType.Concatenation, CurrentWord));
                 break;
 
-            case ":":
-                Tokens.Add(new Token(TokenType.Colon, CurrentWord));
+            case ".":
+                Tokens.Add(new Token(TokenType.Point, CurrentWord));
                 break;
 
             case ",":
                 Tokens.Add(new Token(TokenType.Comma, CurrentWord));
                 break;
 
-            case ";":
-                Tokens.Add(new Token(TokenType.Semicolon, CurrentWord));
+            case ":":
+                Tokens.Add(new Token(TokenType.Colon, CurrentWord));
                 break;
 
-            case "=>":
+            case ";":
+                Tokens.Add(new Token(TokenType.Semicolon, CurrentWord));
                 break;
 
             case "(":
@@ -378,34 +417,58 @@ public class Lexer
                 Tokens.Add(new Token(TokenType.Number, CurrentWord));
                 break;
 
+            case "bool":
+                Tokens.Add(new Token(TokenType.Bool, CurrentWord));
+                break;
+
             case "Id":
                 Tokens.Add(new Token(TokenType.Id, CurrentWord));
                 break;
 
-            case "bool":
-                Tokens.Add(new Token(TokenType.Boolean, CurrentWord));
+            case "string":
+                Tokens.Add(new Token(TokenType.String, CurrentWord));
                 break;
 
-            case "\"":
-                Tokens.Add(new Token(TokenType.Words, CurrentWord));
-                break;
-
-            case "'": // chek if it work (not yet)(yes, work)
-                Tokens.Add(new Token(TokenType.Words, CurrentWord));
-                break;
-
-            case string example when double.TryParse(example, out _): // case of a number
-                for (int j = 0; j < Source.Length; j++)
-                {
-
-                }
+            case string NumberType when double.TryParse(NumberType, out _): // case of a number
+                Tokens.Add(new Token(TokenType.NumberValue, CurrentWord));
                 break;
 
             case " ":
+                break;
+
             case "\n":
+                Tokens.Add(new Token(TokenType.LineChange, CurrentWord));
+                break;
+
+            case "EOF":
+                Tokens.Add(new Token(TokenType.EOF, CurrentWord));
+                break;
+
+            case "targets":
+                Tokens.Add(new Token(TokenType.Variable, CurrentWord));
+                break;
+
+
             default:
+                if (!double.TryParse(CurrentWord[0].ToString(), out _))
+                    Tokens.Add(new Token(TokenType.Variable, CurrentWord));
+                else
+                    throw new Error("Not accepted variable declaration");
                 break;
         }
 
+    }
+
+
+    ///Especial Tokenyzer to the cases of words values
+    public void EspecialTokeny(int start, int end)
+    {
+        string Value = string.Empty;
+        while (start < end)
+        {
+            Value += Source[start];
+            start++;
+        }
+        Tokens.Add(new Token(TokenType.WordValue, Value));
     }
 }
