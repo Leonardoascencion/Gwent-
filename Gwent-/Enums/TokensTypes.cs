@@ -26,6 +26,7 @@ public enum TokenType
     Context, // context
     NumberValue, // NumberValue (when find a number)
     WordValue, // WordValue (when find a word between "")
+    BoleanValue, // Bool Value (when find true or false)
 
     //Especial methods 
     TriggerPlayer, // TriggerPlayer 
@@ -45,8 +46,6 @@ public enum TokenType
 
 
     //Boolean
-    True, // true 
-    False, // false 
     Not, // ! 
     And, // &&
     Or, // ||
@@ -61,8 +60,8 @@ public enum TokenType
     Increment, //++
     Decrement, //--
     //Logical
-    PlusEqual, //+= 
-    MinusEqual, //-= 
+    PlusEqual, //+= //creo q esto no lo voy a usar
+    MinusEqual, //-= // creo q esto no lo voy a usar
     Equal, //==
     Less, //<
     LessEq, // <=
@@ -75,6 +74,7 @@ public enum TokenType
     SpaceConcatenation, //@@ include the white spaces
     Concatenation, //@
     Assign, //=
+    Point, //.
     Comma, //, 
     Colon, //: 
     Semicolon, //; 
@@ -89,7 +89,7 @@ public enum TokenType
     //Identifier declarators
     Number,  // Int
     String,  // String beteween " "
-    Boolean, // bool
+    Bool, // bool
     Id,      // Id
     Variable, // Any Combination of Letter and Number(Number First dont)
 

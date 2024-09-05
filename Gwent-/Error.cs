@@ -217,14 +217,5 @@ using TokenClass;
 public class Error : Exception
 {
     public string Errormesage { get; }
-    public ErrorType ErrorType { get; }
-
     public Error(string errormesage) => Errormesage = errormesage;
-}
-
-public enum ErrorType
-{
-    Lexical,
-    Syntax,
-    Semantic
 }

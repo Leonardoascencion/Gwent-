@@ -1,6 +1,7 @@
 
 
 //Base class for all the posible acctions in the game
+using System.Net.NetworkInformation;
 using TokenClass;
 
 public abstract class Action
@@ -25,19 +26,19 @@ public class BinaryAction : Action
 }
 
 /// <summary>
-/// case of actions that only needs a one parametrs(sen(x) , x! ,etc)
+/// case of actions that only needs a one parametrs(++ and --)
 /// nose si haga falta pa este proyecto
 /// </summary>
 public class UnaryAction : Action
 {
-    public Token Operator { get; }
+    public Token ID { get; }
 
-    public Action Right { get; }
+    public Token Operation { get; }
 
-    public UnaryAction(Token op, Action right)
+    public UnaryAction(Token id, Token op)
     {
-        Operator = op;
-        Right = right;
+        ID = id;
+        Operation = op;
     }
 }
 

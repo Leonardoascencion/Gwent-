@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using TokenClass;
@@ -25,6 +26,7 @@ class Parser
             if (Match(TokenType.Effect))
             {
                 Effect Effect = new();
+                Advance();
                 Consume(TokenType.LCurly, "Expected Left Curly");
                 Ignore();
                 Consume(TokenType.Name, "Expected Name declaration");
@@ -50,9 +52,9 @@ class Parser
                         Consume(TokenType.Variable, "Expected a variable declaration name");
                         Token token = Previous();
                         Consume(TokenType.Colon, "Expected Colon");
-                        if (Peek().Type != TokenType.Number || Peek().Type != TokenType.String || Peek().Type != TokenType.Boolean)
+                        if (Peek().Type != TokenType.Number || Peek().Type != TokenType.String || Peek().Type != TokenType.Bool)
                             throw new Error("Expected a Variable Identificator");
-                        VariableType variableType = VariableType(Peek());
+                        VariableType variableType = FindVariableType(Peek());
 
                         Effect.Variables.Add(new(token, variableType));
 
@@ -98,11 +100,12 @@ class Parser
             if (Match(TokenType.Card))
             {
                 Card card = new();
-
+                Advance();
                 Consume(TokenType.Type, "Expected a declaration of a type");
                 Consume(TokenType.Colon, "Expected a declarator :");
                 Consume(TokenType.WordValue, "Expected a Type Name  ");
                 card.Type = Previous().Lexeme;
+
                 bool ErrorChek = false;
                 foreach (var item in CardType.Types)
                     if (Previous().Lexeme != item)
@@ -115,18 +118,16 @@ class Parser
 
                 if (ErrorChek)
                     throw new Error("Not defined Type");
+
                 Consume(TokenType.Comma, "Expected a comma");
                 Ignore();
-
                 Consume(TokenType.Name, "Expected a Name");
                 Consume(TokenType.Colon, "Expected a declarator :");
                 Consume(TokenType.WordValue, "Expected a valid Name Value");
                 card.Name = Previous().Lexeme;
 
-                foreach (var item in CardScope.Cards)
-                    if (card.Name == item.Key)
-                        throw new Error("Name has been taken");
-
+                if (!UnicCard(card.Name))
+                    throw new Error("Name already has been taken");
 
                 Consume(TokenType.Comma, "Expected a comma");
                 Ignore();
@@ -134,43 +135,46 @@ class Parser
                 Consume(TokenType.Faction, "Expected a Faction Name");
                 Consume(TokenType.Colon, "Expected a declarator :");
                 Consume(TokenType.WordValue, "Expected a Faction to belong");
+                ///PONER METODO PARA CALCULAR EL VALOR DEL STRING POR AST
                 card.Faction = Previous().Lexeme;
                 Consume(TokenType.Comma, "Expected a comma");
                 Ignore();
 
-                if (card.Type != "Clima" || card.Type != "Lider" || card.Type != "Aumento" || card.Type != "Target")
+                if (card.Type == "Plata" || card.Type == "Oro")
                 {
                     Consume(TokenType.Power, "Expected a Power declaration");
                     Consume(TokenType.Colon, "Expected a declarator :");
                     Consume(TokenType.NumberValue, "Expected a Number Value");
+                    ///PONER METODO PARA CALCULAR EL DOUBLE Y DEVOLVERLO EN FORMA DE ARBOL
                     double.TryParse(Previous().Lexeme, out double result);
                     card.Power = result;
                 }
                 else
-                {
                     if (Peek().Type == TokenType.Power)
-                    {
-                        Consume(TokenType.Power, "Expected a Power declaration (IF declarated the power must doit raight)");
-                        Consume(TokenType.Colon, "Expected a declarator : (IF declarated the power must doit raight)");
-                        Consume(TokenType.NumberValue, "Expected a Number Value (IF declarated the power must doit raight)");
-                    }
+                {
+                    Consume(TokenType.Power, "Expected a Power declaration (IF declarated the power must doit right)");
+                    Consume(TokenType.Colon, "Expected a declarator : (IF declarated the power must doit right)");
+                    Consume(TokenType.NumberValue, "Expected a Number Value (IF declarated the power must doit right)");
                 }
+
+                Consume(TokenType.Comma, "Expected a comma");
                 Ignore();
 
-                if (card.Type != "Clima" || card.Type != "Lider" || card.Type != "Aumento" || card.Type != "Target")
+                if (card.Type == "Plata" || card.Type == "Oro")
                 {
                     Consume(TokenType.Range, "Expected a Range comand for the battle (must have at least one)");
                     Consume(TokenType.Colon, "Expected a declarator :");
                     Consume(TokenType.RBracket, "Expected the start of the collection of Ranges");
                     Advance();
+                    int i = 0;
                     while (Peek().Type != TokenType.RBracket)
                     {
-                        int i = 0;
                         if (i > 3)
                             throw new Error("Not accepted more than 3 Range declaration");
 
                         Consume(TokenType.WordValue, "Expected the Range asignation");
-                        card.Range[i] = FindRangeType(Peek());
+                        ///AKI TMB UN ARBOL PARA CALCULAR EL VALOR DEL STRING
+                        card.Range[i] = FindRangeType(Previous());
                         if (Peek().Type != TokenType.Comma)
                             break;
                         Consume(TokenType.Comma, "Expected a comma for next Range Asignation");
@@ -179,12 +183,256 @@ class Parser
                     Consume(TokenType.RBracket, "Expected the end of the collection of Ranges");
                     Consume(TokenType.Comma, "Expected a comma");
                     Ignore();
-
-                    Consume(TokenType.OnActivation, "Expected OnActivation Command");
-                    Consume(TokenType.Colon, "Expected declarator :");
-                    Consume(TokenType.RBracket, "Expected the start of the collection of Comands of OnActivation");
-
                 }
+                else
+                if (Peek().Type == TokenType.Range)
+                {
+                    Consume(TokenType.Range, "Expected a Range comand for the battle (must have at least one) (You decided to doit whitout any need so doit right)");
+                    Consume(TokenType.Colon, "Expected a declarator : (You decided to doit whitout any need so doit right)");
+                    Consume(TokenType.RBracket, "Expected the start of the collection of Ranges (You decided to doit whitout any need so doit right)");
+                    Advance();
+                    int i = 0;
+                    while (Peek().Type != TokenType.RBracket)
+                    {
+                        if (i > 3)
+                            throw new Error("Not accepted more than 3 Range declaration (You decided to doit whitout any need so doit right)");
+
+                        Consume(TokenType.WordValue, "Expected the Range asignation (You decided to doit whitout any need so doit right)");
+                        ///AKI TMB UN ARBOL PARA CALCULAR EL VALOR DEL STRING
+                        card.Range[i] = FindRangeType(Previous());
+                        if (Peek().Type != TokenType.Comma)
+                            break;
+                        Consume(TokenType.Comma, "Expected a comma for next Range Asignation (You decided to doit whitout any need so doit right)");
+                        i++;
+                    }
+                    Consume(TokenType.RBracket, "Expected the end of the collection of Ranges");
+                    Consume(TokenType.Comma, "Expected a comma");
+                    Ignore();
+                }
+
+
+                Consume(TokenType.OnActivation, "Expected OnActivation Command");
+                Consume(TokenType.Colon, "Expected declarator :");
+                Ignore();
+
+                card.OnActivation = new OnActivation();
+
+                Consume(TokenType.LBracket, "Expected the start of the collection of Comands of OnActivation ( [ )");
+                Ignore();
+
+                Consume(TokenType.LCurly, "Expected start of the effect declaration ( { )");
+                Ignore();
+
+                Consume(TokenType.Effect, "Expected effect start");
+                Consume(TokenType.Colon, "Expected a declartor :");
+
+                if (Peek().Type == TokenType.WordValue)
+                {
+                    string name = "";
+                    ///AKI TAMBIEN HAY Q CALCULAR EL VALOR DEL AST Q DEBE DEVOLVER UN STRING
+                    if (UnicEffect(Peek().Lexeme))
+                        throw new Error("The effect do not exist");
+
+                    Effect effect = SearchEffect(name);
+                    card.OnActivation.Effects.Add(effect);
+                    Advance();
+                    Ignore();
+
+                    if (Peek().Type == TokenType.LCurly)
+                    {
+                        Advance();
+                        while (Peek().Type != TokenType.RCurly)
+                        {
+                            if (effect.Variables.Count != 0)
+                            {
+                                int i = effect.Variables.Count;
+                                card.OnActivation.ParamasOfEffect = new() { { effect, new List<Tuple<Token, object>>() } };
+                                while (i > 0)
+                                {
+                                    Consume(TokenType.Variable, "Expected the name of the param of the effect");
+                                    string nameofvariable = Previous().Lexeme;
+                                    ///AKI HAY Q CALCULAR TMB EL VALOR DEL AST PARA EL NOMBRE
+                                    Token variable = Previous();
+                                    Consume(TokenType.Colon, "Expected declarator :");
+
+                                    ///ESTO ESTA MAL COMPRUEBA SI ES BOOL O STRING O NUMBER CUANDO DEBERIA DECIR SI Q ES EL VALOR
+                                    if (CorrectParmas(nameofvariable, Peek(), effect))
+                                        card.OnActivation.ParamasOfEffect[effect].Add(new(variable, Peek().Lexeme));
+
+                                    Advance();
+
+                                    if (i - 1 > 0)
+                                        Consume(TokenType.Comma, "Expected more param implementation");
+
+                                    Ignore();
+
+                                    i--;
+                                }
+                            }
+
+
+                            ///Accion a realizar con los parametrso no tengo idea ahora mismo
+                            /// YA ESTA HECHO
+                            ///  RRRRRRRRR  EEEEEEEE CCCCCCCCCC OOOOOOOOO RRRRRRRRR  DDDDDDDD AAAAAAAA RRRRRRRRR   
+                            ///  RRR   RRR  EEE      CCCC   CC  OOO   OOO RRR   RRR  DD   DDD AA    AA RRR   RRR
+                            ///  RRR  RRR   EEEEE    CC         OOO   OOO RRR  RRR   DD   DDD AAA  AAA RRR  RRR
+                            ///  RRR RRR    EEEEE    CC         OOO   OOO RRR RRR    DD   DDD AAAAAAAA RRR RRR
+                            ///  RRR   RRR  EEE      CCCC   CC  OOO   OOO RRR   RRR  DD   DDD AAA  AAA RRR   RRR
+                            ///  RRR    RRR EEEEEEEE CCCCCCCCCC OOOOOOOOO RRR    RRR DDDDDDDD AAA  AAA RRR    RRR
+
+                            Ignore();
+                        }
+                    }
+                }
+                else
+                    if (Peek().Type == TokenType.LCurly)
+                {
+                    {
+                        Advance();
+                        Ignore();
+
+                        Consume(TokenType.Name, "Expected Name declaration");
+                        Consume(TokenType.Colon, "Expected declarator :");
+                        string name = "";
+                        Consume(TokenType.WordValue, "Expected a Name");
+                        ///AKI TMB HAY Q CONSTRUIR EL AST Y EVALUARLO Y Q DEVUELVA UN STRING
+
+                        Effect effect = SearchEffect(name);
+                        card.OnActivation.Effects.Add(effect);
+
+                        if (UnicEffect(Previous().Lexeme))
+                            throw new Error("The effect do not exist");
+
+                        Consume(TokenType.Comma, "Expected a comma");
+                        Ignore();
+
+                        if (effect.Variables.Count != 0)
+                        {
+                            int i = effect.Variables.Count;
+                            card.OnActivation.ParamasOfEffect = new() { { effect, new List<Tuple<Token, object>>() } };
+
+                            while (i > 0)
+                            {
+                                Consume(TokenType.Variable, "Expected the name of the param of the effect");
+                                string nameofvariable = Previous().Lexeme;
+                                ///AKI HAY Q CALCULAR TMB EL VALOR DEL AST PARA EL NOMBRE
+                                Token variable = Previous();
+                                Consume(TokenType.Colon, "Expected declarator :");
+
+                                ///ESTO ESTA MAL COMPRUEBA SI ES BOOL O STRING O NUMBER CUANDO DEBERIA DECIR SI Q ES EL VALOR
+                                if (CorrectParmas(nameofvariable, Peek(), effect))
+                                    card.OnActivation.ParamasOfEffect[effect].Add(new(variable, Peek().Lexeme));
+
+                                Advance();
+                                if (i - 1 > 0)
+                                    Consume(TokenType.Comma, "Expected a comma");
+                                Ignore();
+
+                                i--;
+                            }
+                        }
+                    }
+                    Consume(TokenType.RCurly, "Expected the close of the effect declaration ( } )");
+                }
+                else throw new Error("Not Valid declaration");
+
+                ///No necesariamente tiene q haber una coma asi q ahora hago un iff con un peek()
+                Consume(TokenType.Comma, "Expected a comma");
+                Ignore();
+
+                Consume(TokenType.Selector, "Expected a Selector comand");
+
+                card.OnActivation.Selector = new Selector();
+
+                Consume(TokenType.Colon, "Expected declarator :");
+                Consume(TokenType.LCurly, "Expected the start of the definition ( { )");
+                Ignore();
+
+                Consume(TokenType.Source, "Expected the start of the definition for Source");
+                Consume(TokenType.Colon, "Expected declarator :");
+                String nameofsourcecontext = "";
+                //METODO PARA CALCULAR EL VALOR DEL ARRAY lo igualo al name q esta en la linea de arriba
+                card.OnActivation.Selector.Context = SourceFinder(nameofsourcecontext);
+                Consume(TokenType.Comma, "Expected a comma ,");
+                Ignore();
+
+
+
+                if (Peek().Type == TokenType.Single)
+                {
+                    Advance();
+                    Consume(TokenType.Colon, "Expected declarator :");
+                    Consume(TokenType.Variable, "Expected a bolean value or a boolean variable");
+                    ///AKI VA EL CALCULO DE PARA COMPROBAR SI ES UN BOOLENAO O NO Y DEVOLVERLO EN CASO DE Q SEA
+                    Consume(TokenType.Comma, "Expected a comma ,");
+                    Ignore();
+                }
+
+                Consume(TokenType.Predicate, "Expected the start of the definition for Predicate");
+                Consume(TokenType.Colon, "Expected declarator :");
+                Consume(TokenType.LParen, "Expected start of definition of the variable for predicate action ( ( )");
+                Consume(TokenType.Variable, "Expected a valid variable definition for the predicate");
+
+                ///DUDA SOBRE COMO TRATAR ESTO BIEN TENGO LA IDEA DE COGER Y LAS PROPIEDADES Q SE CAMBIARON Q SEAN LAS Q ME IMPORTA TOCAR PERO NOSE
+                card.OnActivation.Selector.Predicate.Name = Previous().Lexeme;
+
+                Consume(TokenType.RParen, "Expected end of definition of the variable for predicate action");
+                Consume(TokenType.Arrow, "Expected the indicator for the start of the predicate definition");
+
+                if (Peek().Lexeme != card.OnActivation.Selector.Predicate.Name)
+                    throw new Error("Not the type defined");
+
+                Consume(TokenType.Point, "Expected the cast of the propety");
+                switch (Peek().Type)
+                {
+
+                    case TokenType.Type:
+                        ///Expected implementation for the modifaied propety for the predicate of selector
+                        break;
+
+                    case TokenType.Name:
+                        ///Expected implementation for the modifaied propety for the predicate of selector
+                        break;
+
+                    case TokenType.Power:
+                        ///Expected implementation for the modifaied propety for the predicate of selector
+                        break;
+
+                    case TokenType.Faction:
+                        ///Expected implementation for the modifaied propety for the predicate of selector
+                        break;
+
+                    case TokenType.Range:
+                        ///Expected implementation for the modifaied propety for the predicate of selector
+                        break;
+
+                    ///ESTABA ARREGLANDO COMO PINCHA LO DE LAS PROPIEDADES EN UN LLAMADO DE EFECTO CREO Q YA IGUAL REVISAR
+                    ///HACER LA PINCHA PARA CADA PROPIEDAD SE QUEDA PA DESPUES NO VAYA A SER Q ESTO ME LO PUEDA AHORRAR DE ALGUNA MANERA
+
+                    default:
+                        throw new Error("Not valid propety");
+                }
+                Ignore();
+
+                Consume(TokenType.RCurly, "Expected end of definition for the Selector ( } )");
+                while (Peek().Type != TokenType.RCurly)
+                {
+                    if (Peek().Type != TokenType.Comma)
+                        break;
+
+                    Advance();
+                    Consume(TokenType.PostAction, "Expected the start of definition for PostAction or a miss comma has ben written");
+                    ///EMPEZARIA AKI LA DEFINICION PARA POST ACTION Y TODO ESO PERO LO HARE DESPUES DE TERMINAR DE DEFINIR EL CICLO PARA LOS EFECTOS NORMALES
+
+                    Consume(TokenType.RCurly, "Expected end of definition for the Selector ( } )");
+                    Ignore();
+                }
+
+                Consume(TokenType.RCurly, "Expected end of definition for the Selector ( } )");
+
+                ///PARA LAS CARTAS CON MAS EFECTOS LO Q HARE SERA VOLVER A EJECUTAR EL METODO Q CALCULA EL EFECTO Y YA EZEPEACE
+
+
 
                 CardScope.AddCard(card.Name, card);
             }
@@ -514,6 +762,8 @@ class Parser
             return Tokens[EndCheker].Type == type;
         }
       */
+
+
     /// <summary>
     /// Match the token in the currentposition of the list of token with the type of the parameter
     /// </summary>
@@ -577,7 +827,7 @@ class Parser
     }
 
     /// <summary>
-    /// Advances if it is a jump line
+    /// Advances while it is stand in a jump line
     /// </summary>
     public void Ignore()
     {
@@ -585,26 +835,32 @@ class Parser
             CurrentPosition++;
     }
 
-    public VariableType VariableType(Token token)
+    /// <summary>
+    /// Cheks the token for the type available to a variable
+    /// </summary>
+    /// <param name="token">The token to analize</param>
+    /// <returns>Return the type accord to the type of the variable(example string return VariableType.String)</returns>
+    /// <exception cref="Error">Throw an error if the type do not match with the defined in this lengauge</exception>
+    public VariableType FindVariableType(Token token)
     {
-        VariableType type = new();
         switch (token.Lexeme)
         {
             case "Boolean":
-                type = global::VariableType.Bool;
-                break;
-
+                return VariableType.Boolean;
             case "String":
-                type = global::VariableType.String;
-                break;
-
+                return VariableType.String;
             case "Number":
-                type = global::VariableType.Number;
-                break;
+                return VariableType.Number;
         }
-        return type;
+        throw new Error("Not defined type");
     }
 
+    /// <summary>
+    /// Cheks the token for the type of range available to a card
+    /// </summary>
+    /// <param name="token">The token to analize</param>
+    /// <returns>Return the type accord to the type of the variable(example Melee return Range.Melee)</returns>
+    /// <exception cref="Error">Throw an error if the type do not match with the defined in this lengauge</exception>
     public Range FindRangeType(Token token)
     {
         switch (token.Lexeme)
@@ -618,5 +874,458 @@ class Parser
         }
         throw new Error("Not valid Range");
     }
+
+    /// <summary>
+    /// Cheks if the effect already exist
+    /// </summary>
+    /// <param name="name"></param>
+    /// <returns>True if the effect do not exist in the context and false if the effect exist</returns>
+    public bool UnicEffect(string name)
+    {
+        foreach (var item in EffectScope.Effects)
+            if (item.Key == name)
+                return false;
+        return true;
+    }
+
+    /// <summary>
+    /// Cheks if the card already exist
+    /// </summary>
+    /// <param name="name"></param>
+    /// <returns>True if the card do not exist in the context and false if the card exist</returns>
+    public bool UnicCard(string name)
+    {
+        foreach (var item in CardScope.Cards)
+            if (item.Key == name)
+                return false;
+        return true;
+    }
+
+    /// <summary>
+    /// Search the effect in the Effect Scope
+    /// </summary>
+    /// <param name="name">To search the name effect in the global collection of effect</param>
+    /// <returns>The effect founded if it not exist throw an error</returns>
+    /// <exception cref="Error"></exception>
+    public Effect SearchEffect(string name)
+    {
+        foreach (var item in EffectScope.Effects)
+            if (item.Key == name)
+                return item.Value;
+
+        throw new Error("Effect Error 404");
+    }
+
+    /// <summary>
+    /// Checks if the effect calls have the same params has the definition
+    /// </summary>
+    /// <param name="namevariable">The name of the variable</param>
+    /// <param name="type">The type of the variable</param>
+    /// <param name="effect">The effect to check the match</param>
+    /// <returns>True if it have the same paramas propetys the call and the definition</returns>
+    public bool CorrectParmas(string namevariable, Token type, Effect effect)
+    {
+        foreach (var variable in effect.Variables)
+            if (variable.Item1.Lexeme == namevariable)
+                if (variable.Item2 == FindVariableType(type))
+                    return true;
+                else throw new Error("Incorrect type of variable");
+        return false;
+    }
+
+
+    public List<Card> SourceFinder(string name)
+    {
+        foreach (var item in GlobalListCard.ListsOfCards)
+        {
+            if (name == item.Key)
+                return item.Value;
+        }
+        throw new Error("Not defined name for the source");
+    }
+
+
+
+
+    //EMPEZO LO CHIDO A CREAR ARBOLES
+    //
+    //IDEA PARA EL SCOPE
+    //CREO UNA LISTA DE TUPLAS DE VARIABLES CON SU VALOR Q SERIA UN OBJET
+    //ESTA LISTA SERIA GLOBAL Y TODOS TENDRIAN ACCESO A ELLA
+    // PERO LA LSITA FUNCIONA COMO UNA PILA
+    //AGREGO COSAS DE IZQUIERDA A DERECHA DONDE LO DE MAS A LA IZQUIERDA ES LO MAS ANTIGUO
+    //Y SERA LO ULTIMO EN ACCEDER, SI HAY DOS VARIABLES CON EL MISMO NOMBRE PODRIA HACER ALGO COMO Q SE GUARDE LA POSICION
+    //DE DONDE EN LA LISTA SERIA UN NUEVO CONTEXTO
+    //PERO BASICAMENTE SI QUISIERA ACCEDER A UNA VARIABLE SOLO RECORRERIA LA LISTA DE DERECHA A IZQUIERDA Y LA PRIMERA 
+    //VARIABLE Q TENGA EL MISMO NOMBRE ACCEDO AL VALOR
+
+    //VOLVIENDO A LA IDEA DE DICCIONARIO DE NOMBRE VALOR SE ME ACABA DE OCURRIR COMO IMPLEMENTARLO
+    //SENCILLO
+    //YA TENGO EL DICCIONARIO ESTATICO DE VARIABLES 
+    //SOLO TENGO Q DECIR Q EN CADA CONTEXTO CREAR UN DICCIONARIO NUEVO CON LOS ELEMENTOS DEL ANTERIOR
+    //Y A TODOS LOS METODOS LES PASO ESE DICCIOARIO NUEVO
+    //EL PROBLEMA CREO Q ESTA SI EL CODIGO BASE CUBRIRA TODAS LAS POSIBLES COMBINACIONES DE CODIGO Q PUEDAN PASAR 
+    //ESA ES MI UNICA PREOCUPACION
+
+    //YASE Q HACER
+    //LOS UNICOS Q NECESITAN LLEVAR UN CONTEXT SON LOS WHILE LOS FOR Y LOS ACTION(EFECTOS DE CARTAS)
+    //SI ESTOS SON LOS UNICOS Q LO NECESITAN LO UNICO Q TENGO Q HACER ES Q ELLOS TENGAN ESA PROPIEDAD
+    //LES PONGO A CADA UNO UNA PROPIEDAD DE UN CONTEXT(DICCIONARIO DE VARIABLES) Y CON ESO DEBO RESOLVER EL PROBLEMA
+    //A CADA UNO LES PASO COMO PARAMETRO UN CONTEXT PARA PODER CREARLO 
+    //Y CON ESO DEBE ARREGLARSE
+
+    //SIGO TENIENDO PROBLEMAS CON LOS METODOS RESERVADOS
+
+
+    //           AAA               SSSSSSSSSSSS     TTTTTTTTTTTTTTT                      
+    //         AAA AAA          SSSSSSSS            TTTTT TTT TTTTT     
+    //        AAA   AAA           SSSSSSS           TTT   TTT   TTT       
+    //      AAA     AAA              SSSSSSS        TT    TTT    TT            
+    //      AAA       AAA                SSSSSSS    T     TTT     T             
+    //     AAAAAAAAAAAAAAA             SSSSSSS            TTT             
+    //    AAA           AAA     SSSSSSSSSSSS              TTT          
+
+    /*    
+
+public string StringDeterminate()
+{
+    List<Token> Operation = new();
+    while (Peek().Type == TokenType.Comma || Peek().Type == TokenType.LineChange)
+    {
+        if (IsAtEnd())
+            throw new Error("Not valid operation");
+        Operation.Add(Peek());
+        Advance();
+    }
+    return CalculateString(Operation);
+}
+
+ */
+
+    public object Evaluate(object expected)
+    {
+
+        List<Token> tokens = new();
+        while (Peek().Type != TokenType.Comma || Peek().Type != TokenType.LineChange || Peek().Type != TokenType.RCurly)
+        {
+            if (IsAtEnd())
+                throw new Error("Wrong implementation of operation");
+
+            tokens.Add(Peek());
+            Advance();
+        }
+
+        Action operation = Calculate(tokens);
+
+        if (operation is BinaryAction)
+        {
+            //((BinaryAction)operation)
+
+
+        }
+        else if (operation is UnaryAction)
+        {
+
+        }
+        throw new Error("");
+    }
+
+    //5 + 4 devolver 9 CReo q funciona Panga revisar
+    //esta operacion tiene q ser recursiva
+    public Token ReturnValueBinary(Action action)
+    {
+        if (action is Variable variable)
+            return variable.Id;
+
+        if (action is BinaryAction binaryAction)
+
+            switch (binaryAction.Operator.Type)
+            {
+                case TokenType.Plus:
+                case TokenType.Minus:
+                case TokenType.Multiply:
+                case TokenType.Divide:
+                case TokenType.Pow:
+                    {
+                        if (!double.TryParse(ReturnValueBinary(binaryAction.Left).Lexeme, out double left))
+                            throw new Error("Expected a number");
+
+                        if (!double.TryParse(ReturnValueBinary(binaryAction.Right).Lexeme, out double right))
+                            throw new Error("Expected a number");
+
+                        double.TryParse(binaryAction.Operator.Lexeme, out double previousvalue);
+
+                        switch (binaryAction.Operator.Type)
+                        {
+                            case TokenType.More:
+                                previousvalue = left + right;
+                                break;
+
+                            case TokenType.Minus:
+                                previousvalue = left - right;
+                                break;
+
+                            case TokenType.Multiply:
+                                previousvalue = left * right;
+                                break;
+
+                            case TokenType.Divide:
+                                if (right == 0)
+                                    throw new Error("Not accepted division by 0");
+                                previousvalue = left / right;
+                                break;
+
+                            case TokenType.Pow:
+                                previousvalue = Math.Pow(left, right);
+                                break;
+
+                            default:
+                                throw new Error("Wrong implementation");
+                        }
+                    }
+                    break;
+
+                case TokenType.More:
+                case TokenType.MoreEq:
+                case TokenType.Less:
+                case TokenType.LessEq:
+                    {
+                        if (ReturnValueBinary(binaryAction.Left).Type == TokenType.NumberValue || ReturnValueBinary(binaryAction.Right).Type == TokenType.NumberValue)
+                        {
+                            if (!double.TryParse(ReturnValueBinary(binaryAction.Left).Lexeme, out double left))
+                                throw new Error("Expected a number");
+
+                            if (!double.TryParse(ReturnValueBinary(binaryAction.Right).Lexeme, out double right))
+                                throw new Error("Expected a number");
+
+                            switch (binaryAction.Operator.Type)
+                            {
+                                case TokenType.More:
+                                    binaryAction.Operator.Lexeme = (left > right).ToString();
+                                    break;
+                                case TokenType.MoreEq:
+                                    binaryAction.Operator.Lexeme = (left >= right).ToString();
+                                    break;
+                                case TokenType.Less:
+                                    binaryAction.Operator.Lexeme = (left < right).ToString();
+                                    break;
+                                case TokenType.LessEq:
+                                    binaryAction.Operator.Lexeme = (left <= right).ToString();
+                                    break;
+                            }
+                        }
+                        break;
+                    }
+
+                case TokenType.Equal:
+                    if (ReturnValueBinary(binaryAction.Left).Lexeme == ReturnValueBinary(binaryAction.Right).Lexeme)
+                        binaryAction.Operator.Lexeme = "true";
+                    else
+                        binaryAction.Operator.Lexeme = "false";
+                    break;
+
+                case TokenType.Or:
+                    if (ReturnValueBinary(binaryAction.Left).Lexeme == "true" || "true" == ReturnValueBinary(binaryAction.Right).Lexeme)
+                        binaryAction.Operator.Lexeme = "true";
+                    else
+                        binaryAction.Operator.Lexeme = "false";
+                    break;
+
+                case TokenType.And:
+                    if (ReturnValueBinary(binaryAction.Left).Lexeme == "true" && "true" == ReturnValueBinary(binaryAction.Right).Lexeme)
+                        binaryAction.Operator.Lexeme = "true";
+                    else
+                        binaryAction.Operator.Lexeme = "false";
+                    break;
+            }
+
+        return ((BinaryAction)action).Operator;
+    }
+
+    public Token ReturnValueUnary(UnaryAction action)
+    {
+        double.TryParse(action.ID.Lexeme, out double number);
+        if (action.ID.Type == TokenType.NumberValue)
+            switch (action.Operation.Type)
+            {
+                case TokenType.Increment:
+                    action.ID.Lexeme = (number + 1).ToString();
+                    break;
+                case TokenType.Decrement:
+                    action.ID.Lexeme = (number - 1).ToString();
+                    break;
+                default:
+                    throw new Error("Wrong definition for a unary operation");
+            }
+        else if (action.ID.Type == TokenType.Variable)
+        {
+            //AKI ETOY TRABADO
+            //AKI ETOY TRABADO
+            //AKI ETOY TRABADO
+            //AKI ETOY TRABADO
+            //AKI ETOY TRABADO
+            //AKI ETOY TRABADO
+            //AKI ETOY TRABADO
+            //AKI ETOY TRABADO
+            //EL LIO ESE CON Q HAGO LA PINCHA DE SCOPE DE VARIABLES PQ ESO ES LO Q PIENSO HACER
+        }
+        else
+            throw new Error("Not accepted a unary expresion with a operation whitaout a number o variable");
+
+        return action.ID;
+    }
+
+
+
+
+
+
+
+
+
+
+    /// <summary>
+    /// Parses the operation line searching in order all the posibles operation
+    /// </summary>
+    /// <param name="tokens"></param>
+    /// <returns>The AST with the operation line ready to execute</returns>
+    /// <exception cref="Error"></exception>
+    public Action Calculate(List<Token> tokens)
+    {
+        if (tokens.Count == 1)
+            return new Variable(tokens[0]);
+
+        for (int i = 0; i < tokens.Count; i++)
+            if (AndOrOperators(tokens, i))
+                return new BinaryAction(Calculate(SubList(tokens, 0, i - 1)), tokens[i], Calculate(SubList(tokens, 0, i + 1)));
+        for (int i = 0; i < tokens.Count; i++)
+            if (LogicalOperator(tokens, i))
+                return new BinaryAction(Calculate(SubList(tokens, 0, i - 1)), tokens[i], Calculate(SubList(tokens, 0, i + 1)));
+        for (int i = 0; i < tokens.Count; i++)
+            if (LessImportantOperator(tokens, i))
+                return new BinaryAction(Calculate(SubList(tokens, 0, i - 1)), tokens[i], Calculate(SubList(tokens, 0, i + 1)));
+        for (int i = 0; i < tokens.Count; i++)
+            if (MediumImportantOperator(tokens, i))
+                return new BinaryAction(Calculate(SubList(tokens, 0, i - 1)), tokens[i], Calculate(SubList(tokens, 0, i + 1)));
+        for (int i = 0; i < tokens.Count; i++)
+            if (MoreImportantOperator(tokens, i))
+                return new BinaryAction(Calculate(SubList(tokens, 0, i - 1)), tokens[i], Calculate(SubList(tokens, 0, i + 1)));
+
+        for (int i = 0; i < tokens.Count; i++)
+            if (IncreDecrement(tokens, i))
+            {
+                if (tokens[i - 1].Type != TokenType.Variable || tokens.Count != 2)
+                    throw new Error("Not valid Operation");
+            }
+            else return new UnaryAction(tokens[i - 1], tokens[i]);
+
+        throw new Error("Not valid Operation");
+    }
+
+
+    /// <summary>
+    /// Exctracts from a list of tokens one sub list of tokens         
+    /// </summary>
+    /// <param name="tokens">The token list to extract the sub list</param>
+    /// <param name="start">The position where begin the extraction of the original list </param>
+    /// <param name="end">The position where end the extraction of the original list</param>
+    /// <returns>Return the sub list from start to end</returns>
+    /// <exception cref="Error"></exception>
+    public List<Token> SubList(List<Token> tokens, int start, int end)
+    {
+        List<Token> tokens1 = new();
+
+        if (start < 0 || start > tokens.Count || end < 0 || end > tokens.Count)
+            throw new Error("Wrong implementation of operation");
+
+        for (int i = start; i < end; i++)
+            tokens1.Add(tokens[i]);
+
+        return tokens1;
+    }
+
+    /// <summary>
+    /// Says if in the position it is a logical operator
+    /// </summary>
+    /// <returns>True if it is in a logical operator false otherwhise</returns>
+    public bool LogicalOperator(List<Token> tokens, int position)
+    {
+        if (tokens[position].Type == TokenType.Equal)
+            return true;
+        if (tokens[position].Type == TokenType.LessEq)
+            return true;
+        if (tokens[position].Type == TokenType.MoreEq)
+            return true;
+        if (tokens[position].Type == TokenType.Less)
+            return true;
+        if (tokens[position].Type == TokenType.More)
+            return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Method for the less important of the list of operation (+ and -)
+    /// </summary>
+    /// <param name="n"></param>
+    /// <returns>True if the position have a less important operator</returns>
+    public bool LessImportantOperator(List<Token> tokens, int n)
+    {
+        if (tokens[n].Type == TokenType.Plus || tokens[n].Type == TokenType.Minus)
+            return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Method for the medium important of the list of operator (* and /)
+    /// </summary>
+    /// <param name="n"></param>
+    /// <returns>True if the position have a medium important operator</returns>
+    public bool MediumImportantOperator(List<Token> tokens, int n)
+    {
+        if (tokens[n].Type == TokenType.Multiply || tokens[n].Type == TokenType.Divide)
+            return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Method for the more important of the list of operator (^)
+    /// </summary>
+    /// <param name="n"></param>
+    /// <returns>True if in the position have a more important operator</returns>
+    public bool MoreImportantOperator(List<Token> tokens, int n)
+    {
+        if (tokens[n].Lexeme == "^")
+            return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Method for the boolean operators (&& and ||)
+    /// </summary>
+    /// <param name="n"></param>
+    /// <returns>True if in the position have a bolean operator</returns>
+    public bool AndOrOperators(List<Token> tokens, int n)
+    {
+        if (tokens[n].Type == TokenType.And || tokens[n].Type == TokenType.Or)
+            return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Method for the increment and decrement operators (++ and --)
+    /// </summary>
+    /// <param name="n"></param>
+    /// <returns>True if in the position have a increment or decrement operator</returns>
+    public bool IncreDecrement(List<Token> tokens, int n)
+    {
+        if (tokens[n].Type == TokenType.Increment || tokens[n].Type == TokenType.Decrement)
+            return true;
+        return false;
+    }
+
+
+
+
+
 
 }

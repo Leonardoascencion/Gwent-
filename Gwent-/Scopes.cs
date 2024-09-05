@@ -12,7 +12,6 @@ public static class EffectScope
 /// <summary>
 /// Represents all the cards defined at the moment
 /// </summary>
-
 public class CardScope
 {
     public static Dictionary<string, Card> Cards { get; } = new();
@@ -21,24 +20,11 @@ public class CardScope
 }
 
 /// <summary>
-/// Represents all the variables that everyone can use in all the code
-/// </summary>
-public class GlobalVariable
-{
-    public static List<Asignation> Variables { get; } = new();
-    public void AddVariable(Asignation NewOne) => Variables.Add(NewOne);
-
-}
-
-/// <summary>
 /// Represents all the variables that everyone can use for the actions where is written and the actions inside that action
 /// </summary>
 public class VariableScope
 {
-
     public List<Asignation> Variables { get; } = new();
-
-
     public VariableScope()//Case for the 1st method
     {
     }
@@ -49,3 +35,4 @@ public class VariableScope
     public void AddVariable(Asignation Variable) => Variables.Add(Variable);
 
 }
+

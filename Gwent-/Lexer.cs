@@ -80,11 +80,11 @@ public class Lexer
 
         switch (CurrentWord)
         {
-            case "Effect":
+            case "effect":
                 Tokens.Add(new Token(TokenType.Effect, CurrentWord));
                 break;
 
-            case "Card":
+            case "card":
                 Tokens.Add(new Token(TokenType.Card, CurrentWord));
                 break;
 
@@ -193,12 +193,10 @@ public class Lexer
                 break;
 
             case "true":
-                Tokens.Add(new Token(TokenType.True, CurrentWord));
+            case "false":
+                Tokens.Add(new Token(TokenType.BoleanValue, CurrentWord));
                 break;
 
-            case "false":
-                Tokens.Add(new Token(TokenType.False, CurrentWord));
-                break;
 
             case "for":
                 Tokens.Add(new Token(TokenType.For, CurrentWord));
@@ -237,10 +235,11 @@ public class Lexer
                 break;
 
             case "|":
-                switch (Source[CurrentPosition++])
+                CurrentPosition++;
+                switch (Source[CurrentPosition])
                 {
                     case '|':
-                        CurrentWord += Source[CurrentPosition++];
+                        CurrentWord += Source[CurrentPosition];
                         Tokens.Add(new Token(TokenType.Or, CurrentWord));
                         end++;
                         CurrentPosition = end;
@@ -374,12 +373,16 @@ public class Lexer
                     Tokens.Add(new Token(TokenType.Concatenation, CurrentWord));
                 break;
 
-            case ":":
-                Tokens.Add(new Token(TokenType.Colon, CurrentWord));
+            case ".":
+                Tokens.Add(new Token(TokenType.Point, CurrentWord));
                 break;
 
             case ",":
                 Tokens.Add(new Token(TokenType.Comma, CurrentWord));
+                break;
+
+            case ":":
+                Tokens.Add(new Token(TokenType.Colon, CurrentWord));
                 break;
 
             case ";":
@@ -415,7 +418,7 @@ public class Lexer
                 break;
 
             case "bool":
-                Tokens.Add(new Token(TokenType.Boolean, CurrentWord));
+                Tokens.Add(new Token(TokenType.Bool, CurrentWord));
                 break;
 
             case "Id":
@@ -445,11 +448,12 @@ public class Lexer
                 Tokens.Add(new Token(TokenType.Variable, CurrentWord));
                 break;
 
+
             default:
                 if (!double.TryParse(CurrentWord[0].ToString(), out _))
                     Tokens.Add(new Token(TokenType.Variable, CurrentWord));
                 else
-                    LexerError = true;
+                    throw new Error("Not accepted variable declaration");
                 break;
         }
 
