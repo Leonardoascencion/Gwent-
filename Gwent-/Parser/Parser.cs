@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using TokenClass;
@@ -7,14 +8,7 @@ class Parser
 {
     public readonly List<Token> Tokens = new();
     public int CurrentPosition { get; set; } = 0;
-    public static bool ParserError { get; set; } = false;
-    public Parser(List<Token> tokens)
-    {
-        if (!Lexer.LexerError)
-            Tokens = tokens;
-        else
-            ParserError = true;
-    }
+    public Parser(List<Token> tokens) => Parse();
 
     /// <summary>
     /// the thing that will parse everything
@@ -24,296 +18,350 @@ class Parser
         while (!IsAtEnd())
         {
             if (Match(TokenType.Effect))
-            {
-                Effect Effect = new();
-                Advance();
-                Consume(TokenType.LCurly, "Expected Left Curly");
-                Ignore();
-                Consume(TokenType.Name, "Expected Name declaration");
-                Consume(TokenType.Colon, "Expected asignator :");
-                Consume(TokenType.WordValue, "Expected Value Name");
-                Effect.Name = Previous().Lexeme;
-
-                foreach (var effects in EffectScope.Effects)
-                    if (Effect.Name == effects.Key)
-                        throw new Error("Already declared effect");
-
-                Consume(TokenType.Comma, "Expected Comma");
-                Consume(TokenType.LineChange, "Not expected more implementation for Name");
-
-                if (Peek().Type == TokenType.Params)
-                {
-                    Consume(TokenType.Colon, "Expected Colon");
-                    Ignore();
-                    Consume(TokenType.LCurly, "Expected Left Curly");
-                    Ignore();
-                    while (Peek().Type != TokenType.RCurly && Peek().Type != TokenType.EOF)
-                    {
-                        Consume(TokenType.Variable, "Expected a variable declaration name");
-                        Token token = Previous();
-                        Consume(TokenType.Colon, "Expected Colon");
-                        if (Peek().Type != TokenType.Number || Peek().Type != TokenType.String || Peek().Type != TokenType.Bool)
-                            throw new Error("Expected a Variable Identificator");
-                        VariableType variableType = FindVariableType(Peek());
-
-                        Effect.Variables.Add(new(token, variableType));
-
-                        Advance();
-                        if (Peek().Type == TokenType.Comma)
-                            Advance();
-                        else break;
-                    }
-                    Ignore();
-                    Consume(TokenType.RCurly, "Expected Right Curly");
-                    Consume(TokenType.Comma, "Expected a comma");
-                    Ignore();
-                }
-
-                Consume(TokenType.Action, "Expected a Action to execute");
-                Consume(TokenType.Colon, "Expected : declaration");
-                Consume(TokenType.LParen, "Expected left parentesis");
-                while (Peek().Type != TokenType.RParen && Peek().Type != TokenType.EOF)
-                {
-                    Consume(TokenType.Variable, "Expected Targets call");
-                    Consume(TokenType.Context, "Expected Context call");
-                }
-                Consume(TokenType.RParen, "Expected right parentesis");
-                Consume(TokenType.Arrow, "Expected Arrow");
-                Consume(TokenType.LCurly, "Expected Left Curly");
-                Ignore();
-                while (Peek().Type != TokenType.RCurly)
-                {
-
-                    //Effect.Action = new ActionCase(); Accion para cuerpo de metodo para mas adelante
-                    //Consume(TokenType.Semicolon, "Expected Semicolon after a Action declaration");
-
-                    Ignore();
-                }
-                Consume(TokenType.RCurly, "Expected Right Curly");
-                Consume(TokenType.RCurly, "Expected Right Curly");
-                Ignore();
-
-                EffectScope.AddEffect(Effect.Name, Effect);
-
-            }
-
+                EffectScope.AddEffect(ParsesEffect().Name, ParsesEffect());
+            else
             if (Match(TokenType.Card))
+                CardScope.AddCard(ParsesCard().Name, ParsesCard());
+            else
+                throw new Error("Not valid imput");
+        }
+    }
+
+    #region Creation of Effect
+    ///FALTA LA CONSTRUCCION DE LOS ARBOLES PARA DETERMINAR Q STRING SE QUIERE PARA EL NOMBRE Y FALTA LA CREACION DEL METODO Q ENTRA EN EL ACTION Y DEVUELVE EL ARBOL Q DEBE EJECUTAR
+    ///FALTA LA CONSTRUCCION DE LOS ARBOLES PARA DETERMINAR Q STRING SE QUIERE PARA EL NOMBRE Y FALTA LA CREACION DEL METODO Q ENTRA EN EL ACTION Y DEVUELVE EL ARBOL Q DEBE EJECUTAR
+    ///FALTA LA CONSTRUCCION DE LOS ARBOLES PARA DETERMINAR Q STRING SE QUIERE PARA EL NOMBRE Y FALTA LA CREACION DEL METODO Q ENTRA EN EL ACTION Y DEVUELVE EL ARBOL Q DEBE EJECUTAR
+
+
+    /// <summary>
+    /// For the struck of a effect definition
+    /// </summary>
+    /// <returns>The effect create of a valid source</returns>
+    /// <exception cref="Error">IF has anithing that do not follow the documentation of how create a effect in this project</exception>
+    public Effect ParsesEffect()
+    {
+        Effect effect = new();
+
+        Advance();
+        Consume(TokenType.LCurly, "Expected Left Curly ( { )");
+        Ignore();
+
+        #region NameDefinition
+
+        Consume(TokenType.Name, "Expected the Name declaration");
+        Consume(TokenType.Colon, "Expected asignator :");
+        ///AKI VA EL METODO Q CALCULA EL VALOR DESPUES DEL IGUAL
+        ///AKI VA EL METODO Q CALCULA EL VALOR DESPUES DEL IGUAL
+        ///AKI VA EL METODO Q CALCULA EL VALOR DESPUES DEL IGUAL
+        Consume(TokenType.WordValue, "Expected Value Name");
+        effect.Name = Previous().Lexeme;
+
+        if (EffectScope.Effects.ContainsKey(effect.Name))
+            throw new Error("The current Name has been taken");
+
+        #endregion
+
+        Consume(TokenType.Comma, "Expected Comma");
+        Consume(TokenType.LineChange, "Not expected more implementation for Name");
+        Ignore();
+
+        #region Params
+
+        if (Peek().Type == TokenType.Params)
+        {
+            Advance();
+            Consume(TokenType.Colon, "Expected asignator :");
+            Ignore();
+
+            Consume(TokenType.LCurly, "Expected Left Curly ( { )");
+            Ignore();
+
+            while (!Match(TokenType.RCurly))
             {
-                Card card = new();
+                Ignore();
+                Consume(TokenType.VariableName, "Expected a variable name declaration");
+                string name = Previous().Lexeme;
+
+                Consume(TokenType.Colon, "Expected asignator :");
+
+                if (Peek().Type != TokenType.Number || Peek().Type != TokenType.String || Peek().Type != TokenType.Bool)
+                    throw new Error("Expected a Variable Identificator in the effect " + effect.Name);
+                VariableType variableType = FindVariableType(Peek());
+
+                if (effect.Variables.ContainsKey(name))
+                    throw new Error("Already declare variable int the param of the effect " + effect.Name);
+                else
+                    effect.Variables.Add(name, variableType);
+
                 Advance();
-                Consume(TokenType.Type, "Expected a declaration of a type");
+
+                if (Peek().Type == TokenType.Comma)
+                    Advance();
+                else break;
+            }
+            Ignore();
+            Consume(TokenType.RCurly, "Expected Right Curly ( } )");
+            Consume(TokenType.Comma, "Expected a comma");
+            Ignore();
+        }
+
+        #endregion
+
+        #region Action or the Effect of the effect
+
+
+        Consume(TokenType.Action, "Expected a Action to execute");
+        Consume(TokenType.Colon, "Expected : declaration");
+        Consume(TokenType.LParen, "Expected left parentesis ( ( )");
+        Consume(TokenType.Targets, "Expected targets call");
+        Consume(TokenType.Comma, "Expected a comma");
+        Consume(TokenType.Context, "Expected Context call");
+        Consume(TokenType.RParen, "Expected right parentesis");
+        Consume(TokenType.Arrow, "Expected Arrow");
+        Consume(TokenType.LCurly, "Expected Left Curly");
+        Ignore();
+
+        while (Peek().Type != TokenType.RCurly)
+        {
+            //AKI VA EL METODO Q SE ENCARGA DE CONSTRUIR EL METODO Q EJECUTA EL CUERPO Y GUARDA EL AST CORRESPONDIENTE                            
+            //AKI VA EL METODO Q SE ENCARGA DE CONSTRUIR EL METODO Q EJECUTA EL CUERPO Y GUARDA EL AST CORRESPONDIENTE                                
+            //AKI VA EL METODO Q SE ENCARGA DE CONSTRUIR EL METODO Q EJECUTA EL CUERPO Y GUARDA EL AST CORRESPONDIENTE                                
+            //AKI VA EL METODO Q SE ENCARGA DE CONSTRUIR EL METODO Q EJECUTA EL CUERPO Y GUARDA EL AST CORRESPONDIENTE                                    
+            Ignore();
+        }
+
+        #endregion
+
+        Advance();
+        Ignore();
+
+        Consume(TokenType.RCurly, "Expected Right Curly");
+        Ignore();
+
+        return effect;
+    }
+
+    #endregion
+
+
+    #region Creation of Card
+
+    /// <summary>
+    /// For the struck of a card definition
+    /// </summary>
+    /// <returns>The card create of a valid source</returns>
+    /// <exception cref="Error">IF has anithing that do not follow the documentation of how create a card in this project</exception>
+    public Card ParsesCard()
+    {
+        Card card = new();
+        Dictionary<string, bool> DefinedPropetys = new Dictionary<string, bool>()
+        {
+            {"Name",false},
+            {"Type",false},
+            {"Faction",false},
+            {"Power",false},
+            {"Range",false}
+        };
+
+        Advance();
+        Consume(TokenType.LCurly, "Expected Left Curly ( { )");
+        Ignore();
+
+        #region Propetys Definition
+        ///IMPLEMENTACION DE PROPIEDADES BASICAS DE LAS CARTAS CASI COMPLETAMENTE FUNCIONAL FALTA LOS ARBOLES 
+        while (Peek().Type != TokenType.OnActivation)
+        {
+            Ignore();
+
+            if (Peek().Type == TokenType.Type)
+            {
+                if (DefinedPropetys["Type"])
+                    throw new Error("Type has been already declared");
+
+                Advance();
                 Consume(TokenType.Colon, "Expected a declarator :");
-                Consume(TokenType.WordValue, "Expected a Type Name  ");
+                Consume(TokenType.WordValue, "Expected a Type Name");
+                ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO
+                ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO
+                ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO                
                 card.Type = Previous().Lexeme;
 
-                bool ErrorChek = false;
-                foreach (var item in CardType.Types)
-                    if (Previous().Lexeme != item)
-                        ErrorChek = true;
-                    else
-                    {
-                        ErrorChek = false;
-                        break;
-                    }
-
-                if (ErrorChek)
+                if (!CardType.Types.Contains(card.Type))
                     throw new Error("Not defined Type");
 
                 Consume(TokenType.Comma, "Expected a comma");
                 Ignore();
-                Consume(TokenType.Name, "Expected a Name");
+
+                DefinedPropetys["Type"] = true;
+                continue;
+            }
+
+            if (Peek().Type == TokenType.Name)
+            {
+                if (DefinedPropetys["Name"])
+                    throw new Error("Name has been already declared");
+
+                Advance();
                 Consume(TokenType.Colon, "Expected a declarator :");
                 Consume(TokenType.WordValue, "Expected a valid Name Value");
+                ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRIGN DEVUELTO POR EL AST FORMADO
+                ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRIGN DEVUELTO POR EL AST FORMADO
+                ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRIGN DEVUELTO POR EL AST FORMADO            
                 card.Name = Previous().Lexeme;
 
-                if (!UnicCard(card.Name))
+                if (CardScope.Cards.ContainsKey(card.Name))
                     throw new Error("Name already has been taken");
 
                 Consume(TokenType.Comma, "Expected a comma");
                 Ignore();
 
-                Consume(TokenType.Faction, "Expected a Faction Name");
+                DefinedPropetys["Name"] = true;
+                continue;
+            }
+
+            if (Peek().Type == TokenType.Faction)
+            {
+                if (DefinedPropetys["Faction"])
+                    throw new Error("Faction has been already declared");
+
+                Advance();
                 Consume(TokenType.Colon, "Expected a declarator :");
                 Consume(TokenType.WordValue, "Expected a Faction to belong");
-                ///PONER METODO PARA CALCULAR EL VALOR DEL STRING POR AST
+                ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRIGN DEVUELTO POR EL AST FORMADO
+                ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRIGN DEVUELTO POR EL AST FORMADO
+                ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRIGN DEVUELTO POR EL AST FORMADO   
                 card.Faction = Previous().Lexeme;
-                Consume(TokenType.Comma, "Expected a comma");
-                Ignore();
-
-                if (card.Type == "Plata" || card.Type == "Oro")
-                {
-                    Consume(TokenType.Power, "Expected a Power declaration");
-                    Consume(TokenType.Colon, "Expected a declarator :");
-                    Consume(TokenType.NumberValue, "Expected a Number Value");
-                    ///PONER METODO PARA CALCULAR EL DOUBLE Y DEVOLVERLO EN FORMA DE ARBOL
-                    double.TryParse(Previous().Lexeme, out double result);
-                    card.Power = result;
-                }
-                else
-                    if (Peek().Type == TokenType.Power)
-                {
-                    Consume(TokenType.Power, "Expected a Power declaration (IF declarated the power must doit right)");
-                    Consume(TokenType.Colon, "Expected a declarator : (IF declarated the power must doit right)");
-                    Consume(TokenType.NumberValue, "Expected a Number Value (IF declarated the power must doit right)");
-                }
 
                 Consume(TokenType.Comma, "Expected a comma");
                 Ignore();
 
-                if (card.Type == "Plata" || card.Type == "Oro")
-                {
-                    Consume(TokenType.Range, "Expected a Range comand for the battle (must have at least one)");
-                    Consume(TokenType.Colon, "Expected a declarator :");
-                    Consume(TokenType.RBracket, "Expected the start of the collection of Ranges");
-                    Advance();
-                    int i = 0;
-                    while (Peek().Type != TokenType.RBracket)
-                    {
-                        if (i > 3)
-                            throw new Error("Not accepted more than 3 Range declaration");
+                DefinedPropetys["Faction"] = true;
+                continue;
+            }
 
-                        Consume(TokenType.WordValue, "Expected the Range asignation");
-                        ///AKI TMB UN ARBOL PARA CALCULAR EL VALOR DEL STRING
-                        card.Range[i] = FindRangeType(Previous());
-                        if (Peek().Type != TokenType.Comma)
-                            break;
-                        Consume(TokenType.Comma, "Expected a comma for next Range Asignation");
-                        i++;
-                    }
-                    Consume(TokenType.RBracket, "Expected the end of the collection of Ranges");
-                    Consume(TokenType.Comma, "Expected a comma");
-                    Ignore();
-                }
-                else
-                if (Peek().Type == TokenType.Range)
-                {
-                    Consume(TokenType.Range, "Expected a Range comand for the battle (must have at least one) (You decided to doit whitout any need so doit right)");
-                    Consume(TokenType.Colon, "Expected a declarator : (You decided to doit whitout any need so doit right)");
-                    Consume(TokenType.RBracket, "Expected the start of the collection of Ranges (You decided to doit whitout any need so doit right)");
-                    Advance();
-                    int i = 0;
-                    while (Peek().Type != TokenType.RBracket)
-                    {
-                        if (i > 3)
-                            throw new Error("Not accepted more than 3 Range declaration (You decided to doit whitout any need so doit right)");
+            if (Peek().Type == TokenType.Power)
+            {
+                if (DefinedPropetys["Power"])
+                    throw new Error("Power has been already declared");
 
-                        Consume(TokenType.WordValue, "Expected the Range asignation (You decided to doit whitout any need so doit right)");
-                        ///AKI TMB UN ARBOL PARA CALCULAR EL VALOR DEL STRING
-                        card.Range[i] = FindRangeType(Previous());
-                        if (Peek().Type != TokenType.Comma)
-                            break;
-                        Consume(TokenType.Comma, "Expected a comma for next Range Asignation (You decided to doit whitout any need so doit right)");
-                        i++;
-                    }
-                    Consume(TokenType.RBracket, "Expected the end of the collection of Ranges");
-                    Consume(TokenType.Comma, "Expected a comma");
-                    Ignore();
-                }
+                Advance();
+                Consume(TokenType.Colon, "Expected a declarator :");
+                Consume(TokenType.NumberValue, "Expected a Number Value");
+                ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRIGN DEVUELTO POR EL AST FORMADO
+                ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRIGN DEVUELTO POR EL AST FORMADO
+                ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRIGN DEVUELTO POR EL AST FORMADO   
+                double.TryParse(Previous().Lexeme, out double result);
+                card.Power = result;
 
-
-                Consume(TokenType.OnActivation, "Expected OnActivation Command");
-                Consume(TokenType.Colon, "Expected declarator :");
+                Consume(TokenType.Comma, "Expected a comma");
                 Ignore();
 
-                card.OnActivation = new OnActivation();
+                DefinedPropetys["Power"] = true;
+                continue;
+            }
 
-                Consume(TokenType.LBracket, "Expected the start of the collection of Comands of OnActivation ( [ )");
+            if (Peek().Type == TokenType.Range)
+            {
+
+                if (DefinedPropetys["Range"])
+                    throw new Error("Range has been already declared");
+
+                Advance();
+                Consume(TokenType.Colon, "Expected a declarator :");
+                Ignore();
+                Consume(TokenType.RBracket, "Expected the start of the collection of Ranges ( [ )");
                 Ignore();
 
-                Consume(TokenType.LCurly, "Expected start of the effect declaration ( { )");
-                Ignore();
-
-                Consume(TokenType.Effect, "Expected effect start");
-                Consume(TokenType.Colon, "Expected a declartor :");
-
-                if (Peek().Type == TokenType.WordValue)
+                int i = 0;
+                do
                 {
-                    string name = "";
-                    ///AKI TAMBIEN HAY Q CALCULAR EL VALOR DEL AST Q DEBE DEVOLVER UN STRING
-                    if (UnicEffect(Peek().Lexeme))
-                        throw new Error("The effect do not exist");
+                    if (i > 3)
+                        throw new Error("Not accepted more than 3 Range declaration");
 
-                    Effect effect = SearchEffect(name);
-                    card.OnActivation.Effects.Add(effect);
-                    Advance();
+                    Consume(TokenType.WordValue, "Expected the Range asignation");
+                    ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO
+                    ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO
+                    ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO   
+                    string range = Previous().Lexeme;
+                    card.Range.Add(FindRangeType(range));
                     Ignore();
+                    i++;
 
-                    if (Peek().Type == TokenType.LCurly)
-                    {
-                        Advance();
-                        while (Peek().Type != TokenType.RCurly)
-                        {
-                            if (effect.Variables.Count != 0)
-                            {
-                                int i = effect.Variables.Count;
-                                card.OnActivation.ParamasOfEffect = new() { { effect, new List<Tuple<Token, object>>() } };
-                                while (i > 0)
-                                {
-                                    Consume(TokenType.Variable, "Expected the name of the param of the effect");
-                                    string nameofvariable = Previous().Lexeme;
-                                    ///AKI HAY Q CALCULAR TMB EL VALOR DEL AST PARA EL NOMBRE
-                                    Token variable = Previous();
-                                    Consume(TokenType.Colon, "Expected declarator :");
-
-                                    ///ESTO ESTA MAL COMPRUEBA SI ES BOOL O STRING O NUMBER CUANDO DEBERIA DECIR SI Q ES EL VALOR
-                                    if (CorrectParmas(nameofvariable, Peek(), effect))
-                                        card.OnActivation.ParamasOfEffect[effect].Add(new(variable, Peek().Lexeme));
-
-                                    Advance();
-
-                                    if (i - 1 > 0)
-                                        Consume(TokenType.Comma, "Expected more param implementation");
-
-                                    Ignore();
-
-                                    i--;
-                                }
-                            }
-
-
-                            ///Accion a realizar con los parametrso no tengo idea ahora mismo
-                            /// YA ESTA HECHO
-                            ///  RRRRRRRRR  EEEEEEEE CCCCCCCCCC OOOOOOOOO RRRRRRRRR  DDDDDDDD AAAAAAAA RRRRRRRRR   
-                            ///  RRR   RRR  EEE      CCCC   CC  OOO   OOO RRR   RRR  DD   DDD AA    AA RRR   RRR
-                            ///  RRR  RRR   EEEEE    CC         OOO   OOO RRR  RRR   DD   DDD AAA  AAA RRR  RRR
-                            ///  RRR RRR    EEEEE    CC         OOO   OOO RRR RRR    DD   DDD AAAAAAAA RRR RRR
-                            ///  RRR   RRR  EEE      CCCC   CC  OOO   OOO RRR   RRR  DD   DDD AAA  AAA RRR   RRR
-                            ///  RRR    RRR EEEEEEEE CCCCCCCCCC OOOOOOOOO RRR    RRR DDDDDDDD AAA  AAA RRR    RRR
-
-                            Ignore();
-                        }
-                    }
-                }
-                else
-                    if (Peek().Type == TokenType.LCurly)
-                {
+                    if (Peek().Type == TokenType.Comma)
                     {
                         Advance();
                         Ignore();
+                    }
+                } while (Peek().Type != TokenType.RBracket);
 
-                        Consume(TokenType.Name, "Expected Name declaration");
-                        Consume(TokenType.Colon, "Expected declarator :");
-                        string name = "";
-                        Consume(TokenType.WordValue, "Expected a Name");
-                        ///AKI TMB HAY Q CONSTRUIR EL AST Y EVALUARLO Y Q DEVUELVA UN STRING
+                Consume(TokenType.Comma, "Expected a comma");
+                Ignore();
 
-                        Effect effect = SearchEffect(name);
-                        card.OnActivation.Effects.Add(effect);
+                DefinedPropetys["Range"] = true;
+                continue;
+            }
+        }
 
-                        if (UnicEffect(Previous().Lexeme))
-                            throw new Error("The effect do not exist");
+        if (DefinedPropetys.ContainsValue(false))
+            if (card.Type != "Oro" && card.Type != "Plata")
+            {
+                DefinedPropetys["Power"] = true;
+                if (DefinedPropetys.ContainsValue(false))
+                    throw new Error("Missing a propety for delcare");
+            }
+            else
+                throw new Error("Missing a propety for delcare");
 
-                        Consume(TokenType.Comma, "Expected a comma");
-                        Ignore();
+        #endregion
 
+
+
+
+
+        #region OnActivation Definition
+
+        card.OnActivation = new OnActivation();
+
+        Consume(TokenType.OnActivation, "Expected OnActivation Command");
+        Consume(TokenType.Colon, "Expected declarator :");
+        Ignore();
+
+
+        Consume(TokenType.LBracket, "Expected the start of the collection of Comands of OnActivation ( [ )");
+        Ignore();
+
+        while (Peek().Type != TokenType.RBracket)
+        {
+            Consume(TokenType.LCurly, "Expected start of the effect declaration ( { )");
+            Ignore();
+
+            Consume(TokenType.Effect, "Expected effect start");
+            Consume(TokenType.Colon, "Expected a declartor :");
+
+            if (Peek().Type == TokenType.WordValue)
+            {
+                string name = "";
+                ///AKI TAMBIEN HAY Q CALCULAR EL VALOR DEL AST Q DEBE DEVOLVER UN STRING
+                if (UnicEffect(Peek().Lexeme))
+                    throw new Error("The effect do not exist");
+
+                Effect effect = SearchEffect(name);
+                card.OnActivation.Effects.Add(effect);
+                Advance();
+                Ignore();
+
+                if (Peek().Type == TokenType.LCurly)
+                {
+                    Advance();
+                    while (Peek().Type != TokenType.RCurly)
+                    {
                         if (effect.Variables.Count != 0)
                         {
                             int i = effect.Variables.Count;
                             card.OnActivation.ParamasOfEffect = new() { { effect, new List<Tuple<Token, object>>() } };
-
                             while (i > 0)
                             {
-                                Consume(TokenType.Variable, "Expected the name of the param of the effect");
+                                Consume(TokenType.VariableName, "Expected the name of the param of the effect");
                                 string nameofvariable = Previous().Lexeme;
                                 ///AKI HAY Q CALCULAR TMB EL VALOR DEL AST PARA EL NOMBRE
                                 Token variable = Previous();
@@ -324,122 +372,190 @@ class Parser
                                     card.OnActivation.ParamasOfEffect[effect].Add(new(variable, Peek().Lexeme));
 
                                 Advance();
+
                                 if (i - 1 > 0)
-                                    Consume(TokenType.Comma, "Expected a comma");
+                                    Consume(TokenType.Comma, "Expected more param implementation");
+
                                 Ignore();
 
                                 i--;
                             }
                         }
+
+
+                        ///Accion a realizar con los parametrso no tengo idea ahora mismo
+                        /// YA ESTA HECHO
+                        ///  RRRRRRRRR  EEEEEEEE CCCCCCCCCC OOOOOOOOO RRRRRRRRR  DDDDDDDD AAAAAAAA RRRRRRRRR   
+                        ///  RRR   RRR  EEE      CCCC   CC  OOO   OOO RRR   RRR  DD   DDD AA    AA RRR   RRR
+                        ///  RRR  RRR   EEEEE    CC         OOO   OOO RRR  RRR   DD   DDD AAA  AAA RRR  RRR
+                        ///  RRR RRR    EEEEE    CC         OOO   OOO RRR RRR    DD   DDD AAAAAAAA RRR RRR
+                        ///  RRR   RRR  EEE      CCCC   CC  OOO   OOO RRR   RRR  DD   DDD AAA  AAA RRR   RRR
+                        ///  RRR    RRR EEEEEEEE CCCCCCCCCC OOOOOOOOO RRR    RRR DDDDDDDD AAA  AAA RRR    RRR
+
+                        Ignore();
                     }
-                    Consume(TokenType.RCurly, "Expected the close of the effect declaration ( } )");
                 }
-                else throw new Error("Not Valid declaration");
+            }
+            else
+                if (Peek().Type == TokenType.LCurly)
+            {
+                {
+                    Advance();
+                    Ignore();
 
-                ///No necesariamente tiene q haber una coma asi q ahora hago un iff con un peek()
-                Consume(TokenType.Comma, "Expected a comma");
-                Ignore();
+                    Consume(TokenType.Name, "Expected Name declaration");
+                    Consume(TokenType.Colon, "Expected declarator :");
+                    string name = "";
+                    Consume(TokenType.WordValue, "Expected a Name");
+                    ///AKI TMB HAY Q CONSTRUIR EL AST Y EVALUARLO Y Q DEVUELVA UN STRING
 
-                Consume(TokenType.Selector, "Expected a Selector comand");
+                    Effect effect = SearchEffect(name);
+                    card.OnActivation.Effects.Add(effect);
 
-                card.OnActivation.Selector = new Selector();
+                    if (UnicEffect(Previous().Lexeme))
+                        throw new Error("The effect do not exist");
 
+                    Consume(TokenType.Comma, "Expected a comma");
+                    Ignore();
+
+                    if (effect.Variables.Count != 0)
+                    {
+                        int i = effect.Variables.Count;
+                        card.OnActivation.ParamasOfEffect = new() { { effect, new List<Tuple<Token, object>>() } };
+
+                        while (i > 0)
+                        {
+                            Consume(TokenType.VariableName, "Expected the name of the param of the effect");
+                            string nameofvariable = Previous().Lexeme;
+                            ///AKI HAY Q CALCULAR TMB EL VALOR DEL AST PARA EL NOMBRE
+                            Token variable = Previous();
+                            Consume(TokenType.Colon, "Expected declarator :");
+
+                            ///ESTO ESTA MAL COMPRUEBA SI ES BOOL O STRING O NUMBER CUANDO DEBERIA DECIR SI Q ES EL VALOR
+                            if (CorrectParmas(nameofvariable, Peek(), effect))
+                                card.OnActivation.ParamasOfEffect[effect].Add(new(variable, Peek().Lexeme));
+
+                            Advance();
+                            if (i - 1 > 0)
+                                Consume(TokenType.Comma, "Expected a comma");
+                            Ignore();
+
+                            i--;
+                        }
+                    }
+                }
+                Consume(TokenType.RCurly, "Expected the close of the effect declaration ( } )");
+            }
+            else throw new Error("Not Valid declaration");
+
+            ///No necesariamente tiene q haber una coma asi q ahora hago un iff con un peek()
+            Consume(TokenType.Comma, "Expected a comma");
+            Ignore();
+
+            Consume(TokenType.Selector, "Expected a Selector comand");
+
+            card.OnActivation.Selector = new Selector();
+
+            Consume(TokenType.Colon, "Expected declarator :");
+            Consume(TokenType.LCurly, "Expected the start of the definition ( { )");
+            Ignore();
+
+            Consume(TokenType.Source, "Expected the start of the definition for Source");
+            Consume(TokenType.Colon, "Expected declarator :");
+            //String nameofsourcecontext = "";
+            //METODO PARA CALCULAR EL VALOR DEL ARRAY lo igualo al name q esta en la linea de arriba
+            //  card.OnActivation.Selector.Context = SourceFinder(nameofsourcecontext);
+            Consume(TokenType.Comma, "Expected a comma ,");
+            Ignore();
+
+
+
+            if (Peek().Type == TokenType.Single)
+            {
+                Advance();
                 Consume(TokenType.Colon, "Expected declarator :");
-                Consume(TokenType.LCurly, "Expected the start of the definition ( { )");
-                Ignore();
-
-                Consume(TokenType.Source, "Expected the start of the definition for Source");
-                Consume(TokenType.Colon, "Expected declarator :");
-                //String nameofsourcecontext = "";
-                //METODO PARA CALCULAR EL VALOR DEL ARRAY lo igualo al name q esta en la linea de arriba
-                //  card.OnActivation.Selector.Context = SourceFinder(nameofsourcecontext);
+                Consume(TokenType.VariableName, "Expected a bolean value or a boolean variable");
+                ///AKI VA EL CALCULO DE PARA COMPROBAR SI ES UN BOOLENAO O NO Y DEVOLVERLO EN CASO DE Q SEA
                 Consume(TokenType.Comma, "Expected a comma ,");
                 Ignore();
-
-
-
-                if (Peek().Type == TokenType.Single)
-                {
-                    Advance();
-                    Consume(TokenType.Colon, "Expected declarator :");
-                    Consume(TokenType.Variable, "Expected a bolean value or a boolean variable");
-                    ///AKI VA EL CALCULO DE PARA COMPROBAR SI ES UN BOOLENAO O NO Y DEVOLVERLO EN CASO DE Q SEA
-                    Consume(TokenType.Comma, "Expected a comma ,");
-                    Ignore();
-                }
-
-                Consume(TokenType.Predicate, "Expected the start of the definition for Predicate");
-                Consume(TokenType.Colon, "Expected declarator :");
-                Consume(TokenType.LParen, "Expected start of definition of the variable for predicate action ( ( )");
-                Consume(TokenType.Variable, "Expected a valid variable definition for the predicate");
-
-                ///DUDA SOBRE COMO TRATAR ESTO BIEN TENGO LA IDEA DE COGER Y LAS PROPIEDADES Q SE CAMBIARON Q SEAN LAS Q ME IMPORTA TOCAR PERO NOSE
-                card.OnActivation.Selector.Predicate.Name = Previous().Lexeme;
-
-                Consume(TokenType.RParen, "Expected end of definition of the variable for predicate action");
-                Consume(TokenType.Arrow, "Expected the indicator for the start of the predicate definition");
-
-                if (Peek().Lexeme != card.OnActivation.Selector.Predicate.Name)
-                    throw new Error("Not the type defined");
-
-                Consume(TokenType.Point, "Expected the cast of the propety");
-                switch (Peek().Type)
-                {
-
-                    case TokenType.Type:
-                        ///Expected implementation for the modifaied propety for the predicate of selector
-                        break;
-
-                    case TokenType.Name:
-                        ///Expected implementation for the modifaied propety for the predicate of selector
-                        break;
-
-                    case TokenType.Power:
-                        ///Expected implementation for the modifaied propety for the predicate of selector
-                        break;
-
-                    case TokenType.Faction:
-                        ///Expected implementation for the modifaied propety for the predicate of selector
-                        break;
-
-                    case TokenType.Range:
-                        ///Expected implementation for the modifaied propety for the predicate of selector
-                        break;
-
-                    ///ESTABA ARREGLANDO COMO PINCHA LO DE LAS PROPIEDADES EN UN LLAMADO DE EFECTO CREO Q YA IGUAL REVISAR
-                    ///HACER LA PINCHA PARA CADA PROPIEDAD SE QUEDA PA DESPUES NO VAYA A SER Q ESTO ME LO PUEDA AHORRAR DE ALGUNA MANERA
-
-                    default:
-                        throw new Error("Not valid propety");
-                }
-                Ignore();
-
-                Consume(TokenType.RCurly, "Expected end of definition for the Selector ( } )");
-                while (Peek().Type != TokenType.RCurly)
-                {
-                    if (Peek().Type != TokenType.Comma)
-                        break;
-
-                    Advance();
-                    Consume(TokenType.PostAction, "Expected the start of definition for PostAction or a miss comma has ben written");
-                    ///EMPEZARIA AKI LA DEFINICION PARA POST ACTION Y TODO ESO PERO LO HARE DESPUES DE TERMINAR DE DEFINIR EL CICLO PARA LOS EFECTOS NORMALES
-
-                    Consume(TokenType.RCurly, "Expected end of definition for the Selector ( } )");
-                    Ignore();
-                }
-
-                Consume(TokenType.RCurly, "Expected end of definition for the Selector ( } )");
-
-                ///PARA LAS CARTAS CON MAS EFECTOS LO Q HARE SERA VOLVER A EJECUTAR EL METODO Q CALCULA EL EFECTO Y YA EZEPEACE
-
-
-
-                CardScope.AddCard(card.Name, card);
             }
+
+            Consume(TokenType.Predicate, "Expected the start of the definition for Predicate");
+            Consume(TokenType.Colon, "Expected declarator :");
+            Consume(TokenType.LParen, "Expected start of definition of the variable for predicate action ( ( )");
+            Consume(TokenType.VariableName, "Expected a valid variable definition for the predicate");
+
+            ///DUDA SOBRE COMO TRATAR ESTO BIEN TENGO LA IDEA DE COGER Y LAS PROPIEDADES Q SE CAMBIARON Q SEAN LAS Q ME IMPORTA TOCAR PERO NOSE
+            card.OnActivation.Selector.Predicate.Name = Previous().Lexeme;
+
+            Consume(TokenType.RParen, "Expected end of definition of the variable for predicate action");
+            Consume(TokenType.Arrow, "Expected the indicator for the start of the predicate definition");
+
+            if (Peek().Lexeme != card.OnActivation.Selector.Predicate.Name)
+                throw new Error("Not the type defined");
+
+            Consume(TokenType.Point, "Expected the cast of the propety");
+            switch (Peek().Type)
+            {
+
+                case TokenType.Type:
+                    ///Expected implementation for the modifaied propety for the predicate of selector
+                    break;
+
+                case TokenType.Name:
+                    ///Expected implementation for the modifaied propety for the predicate of selector
+                    break;
+
+                case TokenType.Power:
+                    ///Expected implementation for the modifaied propety for the predicate of selector
+                    break;
+
+                case TokenType.Faction:
+                    ///Expected implementation for the modifaied propety for the predicate of selector
+                    break;
+
+                case TokenType.Range:
+                    ///Expected implementation for the modifaied propety for the predicate of selector
+                    break;
+
+                ///ESTABA ARREGLANDO COMO PINCHA LO DE LAS PROPIEDADES EN UN LLAMADO DE EFECTO CREO Q YA IGUAL REVISAR
+                ///HACER LA PINCHA PARA CADA PROPIEDAD SE QUEDA PA DESPUES NO VAYA A SER Q ESTO ME LO PUEDA AHORRAR DE ALGUNA MANERA
+
+                default:
+                    throw new Error("Not valid propety");
+            }
+            Ignore();
+
+            Consume(TokenType.RCurly, "Expected end of definition for the Selector ( } )");
+            while (Peek().Type != TokenType.RCurly)
+            {
+                if (Peek().Type != TokenType.Comma)
+                    break;
+
+                Advance();
+                Consume(TokenType.PostAction, "Expected the start of definition for PostAction or a miss comma has ben written");
+                ///EMPEZARIA AKI LA DEFINICION PARA POST ACTION Y TODO ESO PERO LO HARE DESPUES DE TERMINAR DE DEFINIR EL CICLO PARA LOS EFECTOS NORMALES
+
+                Consume(TokenType.RCurly, "Expected end of definition for the Selector ( } )");
+                Ignore();
+            }
+
+            Consume(TokenType.RCurly, "Expected end of definition for the Selector ( } )");
+
+            ///PARA LAS CARTAS CON MAS EFECTOS LO Q HARE SERA VOLVER A EJECUTAR EL METODO Q CALCULA EL EFECTO Y YA EZEPEACE
+
+
+
         }
+        #endregion
 
+        Advance();
+        Ignore();
+        Consume(TokenType.RCurly, "Expected the end of the card declaration ( } )");
+
+        return card;
     }
-
+    #endregion
 
 
 
@@ -832,13 +948,13 @@ class Parser
     /// <exception cref="Error">Throw an error if the type do not match with the defined in this lengauge</exception>
     public VariableType FindVariableType(Token token)
     {
-        switch (token.Lexeme)
+        switch (token.Type)
         {
-            case "Boolean":
+            case TokenType.Bool:
                 return VariableType.Boolean;
-            case "String":
+            case TokenType.String:
                 return VariableType.String;
-            case "Number":
+            case TokenType.Number:
                 return VariableType.Number;
         }
         throw new Error("Not defined type");
@@ -850,9 +966,9 @@ class Parser
     /// <param name="token">The token to analize</param>
     /// <returns>Return the type accord to the type of the variable(example Melee return Range.Melee)</returns>
     /// <exception cref="Error">Throw an error if the type do not match with the defined in this lengauge</exception>
-    public Range FindRangeType(Token token)
+    public Range FindRangeType(string range)
     {
-        switch (token.Lexeme)
+        switch (range)
         {
             case "Melee":
                 return Range.Melee;
@@ -877,30 +993,18 @@ class Parser
         return true;
     }
 
-    /// <summary>
-    /// Cheks if the card already exist
-    /// </summary>
-    /// <param name="name"></param>
-    /// <returns>True if the card do not exist in the context and false if the card exist</returns>
-    public bool UnicCard(string name)
-    {
-        foreach (var item in CardScope.Cards)
-            if (item.Key == name)
-                return false;
-        return true;
-    }
+
 
     /// <summary>
     /// Search the effect in the Effect Scope
     /// </summary>
-    /// <param name="name">To search the name effect in the global collection of effect</param>
+    /// <param name="name">The name of the required effect</param>
     /// <returns>The effect founded if it not exist throw an error</returns>
     /// <exception cref="Error"></exception>
     public Effect SearchEffect(string name)
     {
-        foreach (var item in EffectScope.Effects)
-            if (item.Key == name)
-                return item.Value;
+        if (EffectScope.Effects.ContainsKey(name))
+            return EffectScope.Effects.GetValueOrDefault(name, new Effect());
 
         throw new Error("Effect Error 404");
     }
@@ -914,22 +1018,24 @@ class Parser
     /// <returns>True if it have the same paramas propetys the call and the definition</returns>
     public bool CorrectParmas(string namevariable, Token type, Effect effect)
     {
-        foreach (var variable in effect.Variables)
-            if (variable.Item1.Lexeme == namevariable)
-                if (variable.Item2 == FindVariableType(type))
-                    return true;
-                else throw new Error("Incorrect type of variable");
+        if (effect.Variables.ContainsKey(namevariable))
+            if (effect.Variables.Contains(new KeyValuePair<string, VariableType>(namevariable, FindVariableType(type))))
+                return true;
+            else throw new Error("Incorrect type of variable");
         return false;
     }
 
-
-    public Card SourceFinder(string name)
+    /// <summary>
+    /// Search the Card in the Scope of Cards
+    /// </summary>
+    /// <param name="name">The name of the required card</param>
+    /// <returns>The Card founded if it not exist throw an error</returns>
+    /// <exception cref="Error"></exception>
+    public Card CardFinder(string name)
     {
-        foreach (var item in CardScope.Cards)
-        {
-            if (name == item.Key)
-                return item.Value;
-        }
+        if (CardScope.Cards.ContainsKey(name))
+            return CardScope.Cards.GetValueOrDefault(name, new Card());
+
         throw new Error("Not defined name for the source");
     }
 
@@ -1146,7 +1252,7 @@ public string StringDeterminate()
                 default:
                     throw new Error("Wrong definition for a unary operation");
             }
-        else if (action.ID.Type == TokenType.Variable)
+        else if (action.ID.Type == TokenType.VariableName)
         {
             //AKI ETOY TRABADO
             //AKI ETOY TRABADO
@@ -1203,7 +1309,7 @@ public string StringDeterminate()
         for (int i = 0; i < tokens.Count; i++)
             if (IncreDecrement(tokens, i))
             {
-                if (tokens[i - 1].Type != TokenType.Variable || tokens.Count != 2)
+                if (tokens[i - 1].Type != TokenType.VariableName || tokens.Count != 2)
                     throw new Error("Not valid Operation");
             }
             else return new UnaryAction(tokens[i - 1], tokens[i]);

@@ -156,6 +156,10 @@ public class Lexer
                 Tokens.Add(new Token(TokenType.Board, CurrentWord));
                 break;
 
+            case "targets":
+                Tokens.Add(new Token(TokenType.Targets, CurrentWord));
+                break;
+
             case "Context":
                 Tokens.Add(new Token(TokenType.Context, CurrentWord));
                 break;
@@ -413,7 +417,7 @@ public class Lexer
                 Tokens.Add(new Token(TokenType.RCurly, CurrentWord));
                 break;
 
-            case "Int":
+            case "Number":
                 Tokens.Add(new Token(TokenType.Number, CurrentWord));
                 break;
 
@@ -444,14 +448,9 @@ public class Lexer
                 Tokens.Add(new Token(TokenType.EOF, CurrentWord));
                 break;
 
-            case "targets":
-                Tokens.Add(new Token(TokenType.Variable, CurrentWord));
-                break;
-
-
             default:
                 if (!double.TryParse(CurrentWord[0].ToString(), out _))
-                    Tokens.Add(new Token(TokenType.Variable, CurrentWord));
+                    Tokens.Add(new Token(TokenType.VariableName, CurrentWord));
                 else
                     throw new Error("Not accepted variable declaration");
                 break;

@@ -35,7 +35,6 @@ public static class Context
         return Player2;
     }
 
-    //DUDA CON ESTE RETURN
     public static List<Card> Board() => new Board(Player1, Player2).AllCards;
     public static List<Card> HandofPlayer(Player player) => player.Hand.Hand;
     public static List<Card> DeckofPlayer(Player player) => player.PlayerDeck.PlayerDeck;

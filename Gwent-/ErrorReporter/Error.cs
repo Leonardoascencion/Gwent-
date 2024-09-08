@@ -216,6 +216,6 @@ using TokenClass;
 
 public class Error : Exception
 {
-    public string Errormesage { get; }
-    public Error(string errormesage) => Errormesage = errormesage;
+    public string Errormesage { get; } = "Error: ";
+    public Error(string errormesage) => Errormesage += errormesage;
 }

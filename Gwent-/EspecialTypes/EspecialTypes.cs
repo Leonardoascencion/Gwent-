@@ -8,7 +8,7 @@ using TokenClass;
 public class Effect
 {
     public string Name { get; set; } = string.Empty;
-    public List<Tuple<Token, VariableType>> Variables { get; set; } = new();
+    public Dictionary<String, VariableType> Variables { get; set; } = new();
     public ActionInstruction? Action { get; set; }
 
 }
@@ -27,6 +27,7 @@ public class Card
     public PostAction PostAction { get; set; } = new();
     public Player Owner { get; set; } = new();
 
+    public void DeclarerOwner(Player player) => Owner = player;
 
     #region Methods for Predicate
 
@@ -114,6 +115,17 @@ public class Selector
 
     public Selector(bool single) => Single = single;
 
+
+    /// <summary>
+    /// Caso para los post Action
+    /// </summary>
+    /// <param name="selector"></param>
+    public Selector(Selector selector)
+    {
+        ContextList = selector.ContextList;
+        Single = selector.Single;
+        Predicate = selector.Predicate;
+    }
 }
 public enum VariableType
 {
