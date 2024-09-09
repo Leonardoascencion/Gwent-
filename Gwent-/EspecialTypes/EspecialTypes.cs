@@ -8,7 +8,7 @@ using TokenClass;
 public class Effect
 {
     public string Name { get; set; } = string.Empty;
-    public Dictionary<String, VariableType> Variables { get; set; } = new();
+    public Dictionary<string, VariableType> Variables { get; set; } = new();
     public ActionInstruction? Action { get; set; }
 
 }
@@ -23,8 +23,7 @@ public class Card
     public string Faction { get; set; } = string.Empty;
     public double Power { get; set; } = 0;
     public List<Range> Range { get; set; } = new();
-    public OnActivation? OnActivation { get; set; }
-    public PostAction PostAction { get; set; } = new();
+    public OnActivation OnActivation { get; set; } = new();
     public Player Owner { get; set; } = new();
 
     public void DeclarerOwner(Player player) => Owner = player;
@@ -91,41 +90,29 @@ public class Card
 public class OnActivation
 {
     public List<Effect> Effects { get; set; } = new();
-    public Dictionary<Effect, List<Tuple<Token, object>>> ParamasOfEffect { get; set; } = new();
-    public Selector Selector { get; set; } = new Selector();
+    public Dictionary<Effect, Dictionary<string, object>> ParamasOfEffect { get; set; } = new();
+    public List<Selector> Selectors { get; set; } = new();
+    public Dictionary<Effect, List<PostAction>> PostActions { get; set; } = new();
 
-    public OnActivation() { }
 }
+
 public class PostAction
 {
-
-
+    public Effect Effect { get; set; } = new();
+    public Selector Selector { get; set; } = new();
+    public PostAction OptionalPostAction { get; set; } = new();
+    public PostAction() { }
+    public PostAction(OnActivation onActivation) => Selector = onActivation.Selectors.Last();
 
 }
+
 public class Selector
 {
-    public List<Card> ContextList { get; set; } = new();
+    public List<Card> Source { get; set; } = new();
     public bool Single { get; set; } = false;
-    public Card Predicate { get; set; } = new Card();
+    public Action? Predicate { get; set; }
+    public List<Card> FinalSource { get; set; } = new();
 
-    public Selector()
-    {
-
-    }
-
-    public Selector(bool single) => Single = single;
-
-
-    /// <summary>
-    /// Caso para los post Action
-    /// </summary>
-    /// <param name="selector"></param>
-    public Selector(Selector selector)
-    {
-        ContextList = selector.ContextList;
-        Single = selector.Single;
-        Predicate = selector.Predicate;
-    }
 }
 public enum VariableType
 {

@@ -1,0 +1,8 @@
+1-La llamada y la creacion de efectos comparten el comando Effect ambos con mayuscula.
+2-En la creacion de las cartas se debe seguir el orden especificado(primero propiedades y luego onactivation)
+3-Solo se aceptan entradas de efectos o cartas
+4-Se pueden crear cartas sin efectos, pero se tiene q crear una instancia onactivation vacia
+5-Los efectos q no necesiten especificar targets aun necesitan ser instanciados en la creacion de la carta con el efectos
+6-No se admiten variables con nombres repetidos aunque igualen a diferentes tipos de objetos
+7-En la creacion de efectos y cartas se tiene q asegurar q las mayusculas coincidan("Tiburon" no es igual a "tiburon" y se aceptan como dos cartas o efectos completamente diferentes)
+8-Las condiciones opcionales tienen q ser declaradas por completo o ignorar su declaracion por completo 

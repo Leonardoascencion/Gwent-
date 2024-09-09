@@ -14,10 +14,10 @@ public static class Context
     /// <returns>Devuelve el Player dueño del turno si ambos players coinciden se deja al azar (no debe coincidir)</returns>
     public static Player TriggerPlayer()
     {
-        if (Player1.PlayersTurn && !Player2.PlayersTurn)
+        if (Player1.Turn && !Player2.Turn)
             return Player1;
 
-        if (Player2.PlayersTurn && !Player1.PlayersTurn)
+        if (Player2.Turn && !Player1.Turn)
             return Player2;
 
         Random random = new();
@@ -25,19 +25,19 @@ public static class Context
 
         if (n == 1)
         {
-            Player1.PlayersTurn = true;
-            Player2.PlayersTurn = false;
+            Player1.Turn = true;
+            Player2.Turn = false;
             return Player1;
         }
 
-        Player2.PlayersTurn = true;
-        Player1.PlayersTurn = false;
+        Player2.Turn = true;
+        Player1.Turn = false;
         return Player2;
     }
 
     public static List<Card> Board() => new Board(Player1, Player2).AllCards;
     public static List<Card> HandofPlayer(Player player) => player.Hand.Hand;
-    public static List<Card> DeckofPlayer(Player player) => player.PlayerDeck.PlayerDeck;
+    public static List<Card> DeckofPlayer(Player player) => player.Deck.PlayerDeck;
     public static List<Card> GraveyardofPlayer(Player player) => player.Grave.DeadCards;
     public static List<Card> FieldofPlayer(Player player) => new Field(player).FieldCards;
 

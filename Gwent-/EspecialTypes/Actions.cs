@@ -87,7 +87,7 @@ public class ForeachAction : Action
 
 public class ActionInstruction : Action
 {
-    public List<Card> Targets { get; }
+    public List<Card> Targets { get; } = new();
     public List<Action> Body { get; }
     public ActionInstruction(List<Card> targets, List<Action> body)
     {
@@ -97,10 +97,17 @@ public class ActionInstruction : Action
 }
 
 
-public class ExampleMomentary : Action
+public class Predicate : Action
 {
-    public ExampleMomentary()
-    {
+    public Card SourceToCompare { get; set; } = new();
+    public Token Operation { get; set; }
+    public Action ComparerWith { get; set; }
 
+    public Predicate(Card card, Token token, Action action)
+    {
+        SourceToCompare = card;
+        Operation = token;
+        ComparerWith = action;
     }
+
 }

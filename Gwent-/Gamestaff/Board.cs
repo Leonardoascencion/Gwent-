@@ -1,5 +1,3 @@
-
-
 public class PlayerHand
 {
     public List<Card> Hand { get; set; } = new();
@@ -138,39 +136,39 @@ public class Board
 
         AllCards.AddRange(player.Hand.Hand);
         AllCards.AddRange(player.Grave.DeadCards);
-        AllCards.Add(player.LiderOfPlayer.Lider);
-        AllCards.AddRange(player.PlayerDeck.PlayerDeck);
-        AllCards.AddRange(player.PlayerField.MeleeZone);
-        AllCards.AddRange(player.PlayerField.RangedZone);
-        AllCards.AddRange(player.PlayerField.SiegeZone);
-        AllCards.Add(player.PlayerField.BuffMelee);
-        AllCards.Add(player.PlayerField.BuffRanged);
-        AllCards.Add(player.PlayerField.BuffSiege);
+        AllCards.Add(player.Lider.Lider);
+        AllCards.AddRange(player.Deck.PlayerDeck);
+        AllCards.AddRange(player.CombatField.MeleeZone);
+        AllCards.AddRange(player.CombatField.RangedZone);
+        AllCards.AddRange(player.CombatField.SiegeZone);
+        AllCards.Add(player.CombatField.BuffMelee);
+        AllCards.Add(player.CombatField.BuffRanged);
+        AllCards.Add(player.CombatField.BuffSiege);
 
     }
     public Board(Player player1, Player player2)
     {
         AllCards.AddRange(player1.Hand.Hand);
         AllCards.AddRange(player1.Grave.DeadCards);
-        AllCards.Add(player1.LiderOfPlayer.Lider);
-        AllCards.AddRange(player1.PlayerDeck.PlayerDeck);
-        AllCards.AddRange(player1.PlayerField.MeleeZone);
-        AllCards.AddRange(player1.PlayerField.RangedZone);
-        AllCards.AddRange(player1.PlayerField.SiegeZone);
-        AllCards.Add(player1.PlayerField.BuffMelee);
-        AllCards.Add(player1.PlayerField.BuffRanged);
-        AllCards.Add(player1.PlayerField.BuffSiege);
+        AllCards.Add(player1.Lider.Lider);
+        AllCards.AddRange(player1.Deck.PlayerDeck);
+        AllCards.AddRange(player1.CombatField.MeleeZone);
+        AllCards.AddRange(player1.CombatField.RangedZone);
+        AllCards.AddRange(player1.CombatField.SiegeZone);
+        AllCards.Add(player1.CombatField.BuffMelee);
+        AllCards.Add(player1.CombatField.BuffRanged);
+        AllCards.Add(player1.CombatField.BuffSiege);
 
         AllCards.AddRange(player2.Grave.DeadCards);
         AllCards.AddRange(player2.Hand.Hand);
-        AllCards.Add(player2.LiderOfPlayer.Lider);
-        AllCards.AddRange(player2.PlayerDeck.PlayerDeck);
-        AllCards.AddRange(player2.PlayerField.MeleeZone);
-        AllCards.AddRange(player2.PlayerField.RangedZone);
-        AllCards.AddRange(player2.PlayerField.SiegeZone);
-        AllCards.Add(player2.PlayerField.BuffMelee);
-        AllCards.Add(player2.PlayerField.BuffRanged);
-        AllCards.Add(player2.PlayerField.BuffSiege);
+        AllCards.Add(player2.Lider.Lider);
+        AllCards.AddRange(player2.Deck.PlayerDeck);
+        AllCards.AddRange(player2.CombatField.MeleeZone);
+        AllCards.AddRange(player2.CombatField.RangedZone);
+        AllCards.AddRange(player2.CombatField.SiegeZone);
+        AllCards.Add(player2.CombatField.BuffMelee);
+        AllCards.Add(player2.CombatField.BuffRanged);
+        AllCards.Add(player2.CombatField.BuffSiege);
     }
 }
 
@@ -180,30 +178,30 @@ public class Field
 
     public Field(Player player)
     {
-        FieldCards.Add(player.LiderOfPlayer.Lider);
-        FieldCards.AddRange(player.PlayerField.MeleeZone);
-        FieldCards.AddRange(player.PlayerField.RangedZone);
-        FieldCards.AddRange(player.PlayerField.SiegeZone);
-        FieldCards.Add(player.PlayerField.BuffMelee);
-        FieldCards.Add(player.PlayerField.BuffRanged);
-        FieldCards.Add(player.PlayerField.BuffSiege);
+        FieldCards.Add(player.Lider.Lider);
+        FieldCards.AddRange(player.CombatField.MeleeZone);
+        FieldCards.AddRange(player.CombatField.RangedZone);
+        FieldCards.AddRange(player.CombatField.SiegeZone);
+        FieldCards.Add(player.CombatField.BuffMelee);
+        FieldCards.Add(player.CombatField.BuffRanged);
+        FieldCards.Add(player.CombatField.BuffSiege);
     }
     public Field(Player player1, Player player2)
     {
-        FieldCards.Add(player1.LiderOfPlayer.Lider);
-        FieldCards.AddRange(player1.PlayerField.MeleeZone);
-        FieldCards.AddRange(player1.PlayerField.RangedZone);
-        FieldCards.AddRange(player1.PlayerField.SiegeZone);
-        FieldCards.Add(player1.PlayerField.BuffMelee);
-        FieldCards.Add(player1.PlayerField.BuffRanged);
-        FieldCards.Add(player1.PlayerField.BuffSiege);
+        FieldCards.Add(player1.Lider.Lider);
+        FieldCards.AddRange(player1.CombatField.MeleeZone);
+        FieldCards.AddRange(player1.CombatField.RangedZone);
+        FieldCards.AddRange(player1.CombatField.SiegeZone);
+        FieldCards.Add(player1.CombatField.BuffMelee);
+        FieldCards.Add(player1.CombatField.BuffRanged);
+        FieldCards.Add(player1.CombatField.BuffSiege);
 
-        FieldCards.Add(player2.LiderOfPlayer.Lider);
-        FieldCards.AddRange(player2.PlayerField.MeleeZone);
-        FieldCards.AddRange(player2.PlayerField.RangedZone);
-        FieldCards.AddRange(player2.PlayerField.SiegeZone);
-        FieldCards.Add(player2.PlayerField.BuffMelee);
-        FieldCards.Add(player2.PlayerField.BuffRanged);
-        FieldCards.Add(player2.PlayerField.BuffSiege);
+        FieldCards.Add(player2.Lider.Lider);
+        FieldCards.AddRange(player2.CombatField.MeleeZone);
+        FieldCards.AddRange(player2.CombatField.RangedZone);
+        FieldCards.AddRange(player2.CombatField.SiegeZone);
+        FieldCards.Add(player2.CombatField.BuffMelee);
+        FieldCards.Add(player2.CombatField.BuffRanged);
+        FieldCards.Add(player2.CombatField.BuffSiege);
     }
 }
