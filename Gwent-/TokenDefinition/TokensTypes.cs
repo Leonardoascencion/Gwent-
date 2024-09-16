@@ -23,6 +23,12 @@ public enum TokenType
     Hand, // hand 
     Deck, // deck 
     Board, // board 
+    Field, // field
+    Graveyard, // grave
+    HandOfPlayer, // hand of player
+    DeckOfPlayer, // deck of player
+    FieldOfPlayer, // field of player
+    GraveyardOfPlayer, // grave of player
     Targets, // targets
     Context, // context
     NumberValue, // NumberValue (when find a number)
@@ -52,6 +58,7 @@ public enum TokenType
     Or, // ||
 
     //Operator
+
     //Matemathic
     Pow, //^
     Plus, //+
@@ -60,21 +67,20 @@ public enum TokenType
     Divide, ///
     Increment, //++
     Decrement, //--
+
     //Logical
-    PlusEqual, //+= //creo q esto no lo voy a usar
-    MinusEqual, //-= // creo q esto no lo voy a usar
     Equal, //==
     Less, //<
     LessEq, // <=
     More, //>
     MoreEq, //>=
 
-
-
     //Symbol
     SpaceConcatenation, //@@ include the white spaces
     Concatenation, //@
     Assign, //=
+    MinusEqual,//-=
+    PlusEqual,//+=
     Point, //.
     Comma, //, 
     Colon, //: 

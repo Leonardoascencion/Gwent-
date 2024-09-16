@@ -35,13 +35,28 @@ public class UnaryAction : Action
 }
 
 /// <summary>
+/// The asignation tree of a object
+/// </summary>
+public class ObjectAsignation : Action
+{
+    public Action ID { get; set; } //Id stands for identificator
+    public Action Value { get; set; }
+
+    public ObjectAsignation(Action id, Action value)
+    {
+        ID = id;
+        Value = value;
+    }
+}
+
+/// <summary>
 /// The asignation tree of a variable 
 /// </summary>
-public class Asignation : Action
+public class VariableAsignation : Action
 {
     public string Name { get; }  //The name unique of each variable
-    public Action Value { get; } //Represent the actions to determinate the value
-    public Asignation(string name, Action value)
+    public Token Value { get; } //Represent the actions to determinate the value
+    public VariableAsignation(string name, Token value)
     {
         Name = name;
         Value = value;
@@ -49,16 +64,17 @@ public class Asignation : Action
 }
 
 /// <summary>
-/// The representation of anytipe of value 
+/// The representation of any defined primitive value 
 /// </summary>
-public class Atom : Action
+public class PrimitiveAtom : Action
 {
-    public Token Id { get; }
-    public Atom(Token id) => Id = id;
+    public Token PrimitiveValue { get; }
+    public PrimitiveAtom(Token primitivevalue) => PrimitiveValue = primitivevalue;
 }
 
 public class WhileAction : Action
 {
+    public int Repetition { get; set; } = 0;
     public Action Condition { get; }
     public List<Action> Body { get; }
 
@@ -71,13 +87,13 @@ public class WhileAction : Action
 
 public class ForeachAction : Action
 {
-    public Token Reference { get; }
+    public Card Reference { get; }
 
     public List<Card> Targets { get; }
 
     public List<Action> Actions { get; }
 
-    public ForeachAction(Token reference, List<Card> targets, List<Action> actions)
+    public ForeachAction(Card reference, List<Card> targets, List<Action> actions)
     {
         Reference = reference;
         Targets = targets;
@@ -96,18 +112,28 @@ public class ActionInstruction : Action
     }
 }
 
-
-public class Predicate : Action
+public class MethodExecution : Action
 {
-    public Card SourceToCompare { get; set; } = new();
-    public Token Operation { get; set; }
-    public Action ComparerWith { get; set; }
+    public Token FirstReference { get; set; }
+    public Action LaterReference { get; set; }
 
-    public Predicate(Card card, Token token, Action action)
+    public MethodExecution(List<Token> tokens)
     {
-        SourceToCompare = card;
-        Operation = token;
-        ComparerWith = action;
-    }
+        if (tokens.Count == 2)
+        {
+            FirstReference = tokens[1];
+            LaterReference = new LaterReference(tokens[0]);
+        }
 
+        FirstReference = tokens[tokens.Count - 1];
+        tokens.RemoveAt(tokens.Count - 1);
+        LaterReference = new MethodExecution(tokens);
+
+    }
+}
+
+public class LaterReference : Action
+{
+    public Token Reference { get; set; }
+    public LaterReference(Token token) => Reference = token;
 }

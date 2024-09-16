@@ -18,16 +18,4 @@ public static class CardScope
     public static void AddCard(string name, Card newOne) => Cards.Add(name, newOne);
 }
 
-/// <summary>
-/// Represents all the variables that everyone can use for the actions where is written and the actions inside that action
-/// </summary>
-public class VariableScope
-{
-    public Dictionary<string, object> Variables { get; set; } = new();
-    public VariableScope() { }//Case for the 1st method
-    public VariableScope(VariableScope Padre)// Case for the body of the method
-    {
-        Variables = new(Padre.Variables);
-    }
-}
 

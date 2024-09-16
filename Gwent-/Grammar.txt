@@ -1,0 +1,59 @@
+Program ::= (Effect | Card)*
+
+Effect ::= "effect" "{" EffectBody "}"
+
+EffectBody ::= "Name:" STRING ","
+               ["Params:" "{" [Param ("," Param)*] "}" ","]
+               "Action:" "(" "targets" "," "context" ")" "=>" ActionBody
+
+Param ::= IDENTIFIER ":" ("Number" | "String" | "Bool")
+
+ActionBody ::= "{" Statement+ "}"
+
+Statement ::= ForLoop | WhileLoop | Assignment | FunctionCall | IfStatement
+
+ForLoop ::= "for" IDENTIFIER "in" IDENTIFIER "{" Statement+ "}"
+
+WhileLoop ::= "while" "(" Expression ")" "{" Statement+ "}"
+
+Assignment ::= IDENTIFIER ("=" | "+=" | "-=") Expression
+
+FunctionCall ::= IDENTIFIER "(" [Expression ("," Expression)*] ")"
+
+IfStatement ::= "if" "(" Expression ")" "{" Statement+ "}" ["else" "{" Statement+ "}"]
+
+Card ::= "card" "{" CardBody "}"
+
+CardBody ::= "Type:" STRING ","
+             "Name:" STRING ","
+             "Faction:" STRING ","
+             "Power:" NUMBER ","
+             "Range:" "[" STRING ("," STRING)* "]" ","
+             "OnActivation:" "[" Effect+ "]"
+
+Effect ::= "{" EffectBody "}"
+
+Selector ::= "Selector:" "{" 
+             "Source:" STRING ","
+             "Single:" BOOLEAN ","
+             "Predicate:" "(" "unit" ")" "=>" Expression
+             "}"
+
+PostAction ::= "PostAction:" "{" EffectBody "}"
+
+Expression ::= LogicalExpression
+
+LogicalExpression ::= ComparisonExpression (("&&" | "||") ComparisonExpression)*
+
+ComparisonExpression ::= ArithmeticExpression (("<" | ">" | "==" | ">=" | "<=") ArithmeticExpression)*
+
+ArithmeticExpression ::= Term (("+" | "-") Term)*
+
+Term ::= Factor (("*" | "/" | "^") Factor)*
+
+Factor ::= NUMBER | STRING | BOOLEAN | IDENTIFIER | "(" Expression ")" | FunctionCall
+
+STRING ::= '"' [^"]* '"'
+NUMBER ::= [0-9]+ ("." [0-9]+)?
+BOOLEAN ::= "true" | "false"
+IDENTIFIER ::= [a-zA-Z_][a-zA-Z0-9_]*

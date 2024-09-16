@@ -8,8 +8,10 @@ using TokenClass;
 public class Effect
 {
     public string Name { get; set; } = string.Empty;
-    public Dictionary<string, VariableType> Variables { get; set; } = new();
+    public Dictionary<string, VariableType> Params { get; set; } = new();
     public ActionInstruction? Action { get; set; }
+    public Dictionary<string, object> Variables { get; set; } = new();
+    public List<Card> Source { get; set; } = new();
 
 }
 
@@ -24,7 +26,15 @@ public class Card
     public double Power { get; set; } = 0;
     public List<Range> Range { get; set; } = new();
     public OnActivation OnActivation { get; set; } = new();
-    public Player Owner { get; set; } = new();
+    public Player Owner { get; set; }
+
+    public Card()
+    {
+        if (Context.Player1Turn)
+            Owner = Context.Player1;
+        else
+            Owner = Context.Player2;
+    }
 
     public void DeclarerOwner(Player player) => Owner = player;
 
@@ -99,8 +109,8 @@ public class OnActivation
 public class PostAction
 {
     public Effect Effect { get; set; } = new();
+    public Dictionary<string, object> Params { get; set; } = new();
     public Selector Selector { get; set; } = new();
-    public PostAction OptionalPostAction { get; set; } = new();
     public PostAction() { }
     public PostAction(OnActivation onActivation) => Selector = onActivation.Selectors.Last();
 
@@ -114,12 +124,14 @@ public class Selector
     public List<Card> FinalSource { get; set; } = new();
 
 }
+
 public enum VariableType
 {
     Number,
     Boolean,
     String
 }
+
 public enum Range
 {
     Melee,

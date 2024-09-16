@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Linq.Expressions;
+using System.Reflection.Metadata;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
@@ -7,24 +8,37 @@ using TokenClass;
 
 class Parser
 {
-    public readonly List<Token> Tokens = new();
+    public readonly List<Token> Tokens = Lexer.Tokens;
     public int CurrentPosition { get; set; } = 0;
-    public Parser(List<Token> tokens) => Parse();
+    public Action? actionfortest { get; set; }
+    public Parser() => Parse();
 
     /// <summary>
-    /// the thing that will parse everything
+    /// the thing that will parse everything in the source
     /// </summary>
     public void Parse()
     {
+
         while (!IsAtEnd())
         {
+            System.Console.WriteLine("y aki");
             if (Match(TokenType.Effect))
                 EffectScope.AddEffect(ParsesEffect().Name, ParsesEffect());
             else
             if (Match(TokenType.Card))
                 CardScope.AddCard(ParsesCard().Name, ParsesCard());
             else
+            if (Peek().Type == TokenType.VariableName && Peek().Lexeme == "prueba")
+            {
+                Advance();
+                Advance();
+                System.Console.WriteLine("prueba empezo");
+                Pruebaparse();
+                Advance();
+            }
+            else
                 throw new Error("Not valid imput");
+            Advance();
         }
     }
 
@@ -32,7 +46,6 @@ class Parser
     ///FALTA LA CONSTRUCCION DE LOS ARBOLES PARA DETERMINAR Q STRING SE QUIERE PARA EL NOMBRE Y FALTA LA CREACION DEL METODO Q ENTRA EN EL ACTION Y DEVUELVE EL ARBOL Q DEBE EJECUTAR
     ///FALTA LA CONSTRUCCION DE LOS ARBOLES PARA DETERMINAR Q STRING SE QUIERE PARA EL NOMBRE Y FALTA LA CREACION DEL METODO Q ENTRA EN EL ACTION Y DEVUELVE EL ARBOL Q DEBE EJECUTAR
     ///FALTA LA CONSTRUCCION DE LOS ARBOLES PARA DETERMINAR Q STRING SE QUIERE PARA EL NOMBRE Y FALTA LA CREACION DEL METODO Q ENTRA EN EL ACTION Y DEVUELVE EL ARBOL Q DEBE EJECUTAR
-
 
     /// <summary>
     /// For the struck of a effect definition
@@ -42,7 +55,6 @@ class Parser
     public Effect ParsesEffect()
     {
         Effect effect = new();
-
         Advance();
         Consume(TokenType.LCurly, "Expected Left Curly ( { )");
         Ignore();
@@ -51,20 +63,20 @@ class Parser
 
         Consume(TokenType.Name, "Expected the Name declaration");
         Consume(TokenType.Colon, "Expected asignator :");
-        ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO
-        ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO
-        ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO    
-        Consume(TokenType.WordValue, "Expected Value Name");
-        effect.Name = Previous().Lexeme;
+
+
+        ///TODAVIA FALTA LA IMPLEMENTACION PARA DETERMINAR EL VALOR DE VARIABLES
+        ///TODAVIA FALTA LA IMPLEMENTACION PARA DETERMINAR EL VALOR DE VARIABLES
+        ///TODAVIA FALTA LA IMPLEMENTACION PARA DETERMINAR EL VALOR DE VARIABLES
 
         if (EffectScope.Effects.ContainsKey(effect.Name))
             throw new Error("The current Name has been taken");
 
-        #endregion
-
         Consume(TokenType.Comma, "Expected Comma");
         Consume(TokenType.LineChange, "Not expected more implementation for Name");
         Ignore();
+
+        #endregion
 
         #region Params
 
@@ -87,19 +99,22 @@ class Parser
 
                 if (Peek().Type != TokenType.Number || Peek().Type != TokenType.String || Peek().Type != TokenType.Bool)
                     throw new Error("Expected a Variable Identificator in the effect " + effect.Name);
+
                 VariableType variableType = FindVariableType(Peek());
 
-                if (effect.Variables.ContainsKey(name))
+                if (effect.Params.ContainsKey(name))
                     throw new Error("Already declare variable int the param of the effect " + effect.Name);
-                else
-                    effect.Variables.Add(name, variableType);
 
+
+                effect.Params.Add(name, variableType);
+                effect.Variables.Add(name, FindTypeVariable(variableType));
                 Advance();
 
                 if (Peek().Type == TokenType.Comma)
                     Advance();
                 else break;
             }
+
             Ignore();
             Consume(TokenType.RCurly, "Expected Right Curly ( } )");
             Consume(TokenType.Comma, "Expected a comma");
@@ -110,17 +125,18 @@ class Parser
 
         #region Action or the Effect of the effect
 
-
         Consume(TokenType.Action, "Expected a Action to execute");
         Consume(TokenType.Colon, "Expected : declaration");
         Consume(TokenType.LParen, "Expected left parentesis ( ( )");
         Consume(TokenType.Targets, "Expected targets call");
         Consume(TokenType.Comma, "Expected a comma");
         Consume(TokenType.Context, "Expected Context call");
-        Consume(TokenType.RParen, "Expected right parentesis");
-        Consume(TokenType.Arrow, "Expected Arrow");
-        Consume(TokenType.LCurly, "Expected Left Curly");
+        Consume(TokenType.RParen, "Expected right parentesis ( ) )");
+        Consume(TokenType.Arrow, "Expected Arrow  ( => )");
+        Consume(TokenType.LCurly, "Expected Left Curly ( { )");
         Ignore();
+
+        effect.Variables.Add("targets", new List<Card>());
 
         while (Peek().Type != TokenType.RCurly)
         {
@@ -142,8 +158,22 @@ class Parser
         return effect;
     }
 
-    #endregion
+    public void WhileCase(Effect effect, Dictionary<string, object> variableScope)
+    {
+        Advance();
+        Consume(TokenType.LParen, "Expected the start of condition to execute");
+        List<Token> condition = new();
+        while (Peek().Type != TokenType.RParen)
+        {
+            condition.Add(Peek());
+        }
+        Ignore();
+    }
 
+
+
+
+    #endregion
 
     #region Creation of Card
 
@@ -155,6 +185,7 @@ class Parser
     public Card ParsesCard()
     {
         Card card = new();
+        Dictionary<string, object> Variables = new();
         Dictionary<string, bool> DefinedPropetys = new Dictionary<string, bool>()
         {
             {"Name",false},
@@ -339,9 +370,9 @@ class Parser
             Consume(TokenType.Effect, "Expected Effect start");
             Consume(TokenType.Colon, "Expected a declartor :");
 
-            Effect effect = new Effect();
+            Effect effect = new();
 
-            ///ME DI CUENTA Q AKI TENGO Q PASAR EL METODO Q CALCULA LO Q HAYA Y PREGUNTARLE SI ES UN STRING
+            ///ME DI CUENTA Q AKI TENGO Q PASAR EL METODO Q CALCULA LO Q HALLA Y PREGUNTARLE SI ES UN STRING
             if (Peek().Type == TokenType.WordValue)
             {
                 ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO
@@ -389,11 +420,10 @@ class Parser
             }
             else throw new Error("Not Valid declaration for effect");
 
-            int i = effect.Variables.Count;
-            if (i != 0)
+            if (effect.Params.Count != 0)
             {
+                int i = effect.Params.Count;
                 card.OnActivation.ParamasOfEffect = new();
-                //   card.OnActivation.ParamasOfEffect = new() { { effect, new List<Tuple<Token, object>>() } };
                 while (i > 0)
                 {
                     Consume(TokenType.VariableName, "Expected the name of the param of the effect");
@@ -419,67 +449,16 @@ class Parser
             Ignore();
 
             Consume(TokenType.Selector, "Expected Selector definition");
-            Consume(TokenType.Colon, "Expected a declartor :");
-            Consume(TokenType.LCurly, "Expected start of the selector declaration ( { )");
-            Ignore();
-
-            Selector selector = new Selector();
-
-            Consume(TokenType.Source, "Expected the start of the definition for Source");
-            Consume(TokenType.Colon, "Expected declarator :");
-
-            ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO
-            ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO
-            ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO  
-            string nameofsource = Previous().Lexeme;
-
-            selector.Source = SourceFinder(nameofsource, card.Owner);
-
-            Consume(TokenType.Comma, "Expected a comma ,");
-            Ignore();
-
-            if (Peek().Type == TokenType.Single)
-            {
-                Advance();
-                Consume(TokenType.Colon, "Expected declarator :");
-                Consume(TokenType.VariableName, "Expected a bolean value or a boolean variable");
-
-                ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO
-                ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO
-                ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO  
-                object singlevalue = Previous();
-                ///METODO PARA SABER SI ES UN BOOLEANO
-
-                Consume(TokenType.Comma, "Expected a comma ( , )");
-                Ignore();
-            }
-
-            Consume(TokenType.Predicate, "Expected the start of the definition for Predicate");
-            Consume(TokenType.Colon, "Expected declarator :");
-            Consume(TokenType.LParen, "Expected start of definition of the variable for predicate action ( ( )");
-            Consume(TokenType.VariableName, "Expected a valid variable definition for the predicate");
-            Consume(TokenType.RParen, "Expected end of definition of the variable for predicate action ( ) )");
-            Consume(TokenType.Arrow, "Expected the indicator for the start of the predicate definition ( => ) ");
-
-
-            List<Card> predicateresultlist = new();
-            Card predicate = new();
-
-            ///AKI VA UN METODO ESPECIAL PARA CALCULAR LA ENTRADA DESCRITA EN LAS LINEAS SIGUIENTES DEL CODIGO FUENTE
-            ///AKI VA UN METODO ESPECIAL PARA CALCULAR LA ENTRADA DESCRITA EN LAS LINEAS SIGUIENTES DEL CODIGO FUENTE
-            ///AKI VA UN METODO ESPECIAL PARA CALCULAR LA ENTRADA DESCRITA EN LAS LINEAS SIGUIENTES DEL CODIGO FUENTE
-
-            ///TENGO DE IDEA ALGO COMO UN FOREACH CARTA EN LA SOURCE REALIZAR ESTE METODO DIFERENTE PARA CADA CARTA
-            ///TENGO DE IDEA ALGO COMO UN FOREACH CARTA EN LA SOURCE REALIZAR ESTE METODO DIFERENTE PARA CADA CARTA
-            ///TENGO DE IDEA ALGO COMO UN FOREACH CARTA EN LA SOURCE REALIZAR ESTE METODO DIFERENTE PARA CADA CARTA
-
-            Ignore();
-
-            Consume(TokenType.RCurly, "Expected end of definition for the Selector ( } )");
+            card.OnActivation.Selectors.Add(SelectorConstructor(card, false));
             Consume(TokenType.Comma, "Expected a comma ( , )");
+
+            #region PostAction
 
             List<PostAction> totalpostaction = new();
             Selector selectorpostaction = new();
+            Effect effectpostaction = new();
+            card.OnActivation.PostActions.Add(effect, new List<PostAction>());
+
 
             while (Peek().Type != TokenType.RCurly)
             {
@@ -487,7 +466,6 @@ class Parser
                 Consume(TokenType.Colon, "Expected declarator :");
                 Ignore();
 
-                Effect effectpostaction = new();
                 PostAction postAction = new();
 
                 Consume(TokenType.LCurly, "Expected start of definition for the Selector ( { )");
@@ -501,37 +479,66 @@ class Parser
                 ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO  
                 string effectforpostaction = Previous().Lexeme;
 
-
-
                 if (!EffectScope.Effects.ContainsKey(effectforpostaction))
                     throw new Error("The effect do not exist");
 
                 effectpostaction = EffectScope.Effects[effectforpostaction];
                 postAction.Effect = effectpostaction;
 
+                int j = effectpostaction.Params.Count;
+                if (j != 0)
+                {
+                    postAction.Params = new();
+                    while (j > 0)
+                    {
+                        Consume(TokenType.VariableName, "Expected the name of the param of the effect");
+                        string variablename = Previous().Lexeme;
+                        Consume(TokenType.Colon, "Expected a declartor :");
+
+                        ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO
+                        ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO
+                        ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO    
+                        object variablevalue = Peek().Lexeme;
+
+                        if (CorrectParmas(variablename, variablevalue, effectpostaction))
+                            postAction.Params.Add(variablename, variablevalue);
+
+                        Consume(TokenType.Comma, "Expected more params");
+                        Ignore();
+                        j--;
+                    }
+                }
+
                 if (Peek().Type == TokenType.Selector)
-                    ///METODO PAR EL SELECTOR
-                    Consume(TokenType.Comma, "Expected a comma ( , )");
-                ///la linea de arriba va abajo despues de este if NO LO OLVIDES
+                    selectorpostaction = SelectorConstructor(card, true);
                 else
                 if (totalpostaction.Count == 0)
                     postAction.Selector = card.OnActivation.Selectors.Last();
                 else
                     postAction.Selector = totalpostaction.Last().Selector;
 
+                Consume(TokenType.Comma, "Expected a comma ( , )");
                 Ignore();
                 totalpostaction.Add(postAction);
+
+
+                card.OnActivation.PostActions[effect].Add(postAction);
             }
-            if (!card.OnActivation.PostActions.ContainsKey(effect))
-                card.OnActivation.PostActions.Add(effect, totalpostaction);
-            else
-                card.OnActivation.PostActions[effect].AddRange(totalpostaction);
+
+            for (int i = 0; i < card.OnActivation.PostActions[effect].Count; i++)
+            {
+                Consume(TokenType.RCurly, "Expected end of definition for the element of Onactivation ( } )");
+                Ignore();
+            }
 
             Consume(TokenType.RCurly, "Expected end of definition for the element of Onactivation ( } )");
 
             if (Peek().Type == TokenType.Comma)
                 Advance();
+
             Ignore();
+
+            #endregion
 
         }
         #endregion
@@ -542,316 +549,99 @@ class Parser
 
         return card;
     }
-    #endregion
 
+    /// <summary>
+    /// Empieza donde se encontro el token selector y continua a partir de ahi analizando q este escrita correctamente la estructura del codigo
+    /// </summary>
+    /// <param name="card"></param>
+    /// <returns>El selector formado de las lineas de codigo</returns>
+    public Selector SelectorConstructor(Card card, bool ispostaction = false)
+    {
+        Consume(TokenType.Colon, "Expected a declartor :");
+        Consume(TokenType.LCurly, "Expected start of the selector declaration ( { )");
+        Ignore();
 
+        Selector selector = new Selector();
 
+        Consume(TokenType.Source, "Expected the start of the definition for Source");
+        Consume(TokenType.Colon, "Expected declarator :");
 
-    /*
-        /// <summary>
-        /// Parses the AST for the while, for, action and their instructions 
-        /// </summary>
-        /// <returns>The AST of any instruction</returns>
-        public Action Action()
+        ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO
+        ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO
+        ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO  
+        string nameofsource = Previous().Lexeme;
+
+        if (nameofsource == "parent")
         {
-            EndCheker = CurrentPosition;
-            if (MatchCurrent(TokenType.While))
+            if (ispostaction)
             {
-                EndCheker++;
-                if (MatchEnd(TokenType.LParen))
+                if (card.OnActivation.PostActions.ContainsKey(card.OnActivation.Effects.Last()))
                 {
-                    return WhileCase();
+                    if (card.OnActivation.PostActions[card.OnActivation.Effects.Last()].Count == 0)
+                        selector.Source = card.OnActivation.Selectors.Last().FinalSource;
+                    else
+                        selector.Source = card.OnActivation.PostActions[card.OnActivation.Effects.Last()].Last().Selector.FinalSource;
                 }
-                else ParserError = true;
-
-            }
-
-            return new ExampleMomentary();
-        }
-
-
-        public Action ActionCase()
-        {
-            CurrentPosition++;
-            if (MatchCurrent(TokenType.Colon))
-                CurrentPosition++;
-            else
-                ParserError = true;
-            if (!MatchCurrent(TokenType.LCurly))
-                ParserError = true;
-            return ActionContext();
-        }
-
-        public Action ActionContext()
-        {
-            Token targets;
-            Token context;
-            CurrentPosition++;
-            targets = Tokens[CurrentPosition];
-            if (MatchCurrent(TokenType.Comma))
-                CurrentPosition++;
-            context = Tokens[CurrentPosition];
-            if (MatchCurrent(TokenType.RParen))
-                CurrentPosition++;
-            if (MatchCurrent(TokenType.Arrow))
-                CurrentPosition++;
-            if (!MatchCurrent(TokenType.LCurly))
-                ParserError = true;
-            return new ActionInstruction(targets, context, BodyAction());
-        }
-
-        /// <summary>
-        /// Case for the while with only one action
-        /// </summary>
-        /// <returns>The AST of a while but whit the body with only one element</returns>
-        public Action SimpleWhileCase()
-        {
-            Action Condition = ConditionalOperation();
-            List<Action> actions = new() { Action() };
-            return new WhileAction(Condition, actions);
-        }
-
-        /// <summary>
-        /// Case for the while
-        /// </summary>
-        /// <returns>The AST of a while</returns>
-        public Action WhileCase()
-        {
-            EndCheker++;
-            if (!MatchEnd(TokenType.RParen))
-            {
-                while (!MatchEnd(TokenType.LCurly))
-                {
-                    EndCheker++;
-                    if (MatchEnd(TokenType.EOF))
-                        ParserError = true;
-                }
-            }
-            else ParserError = true;
-
-            return WhileAction();
-        }
-
-        /// <summary>
-        /// Manage of create the AST for the while needs to have currentposition value in the while position on the tokens list
-        /// </summary>
-        /// <param name="startcondition">Mark of where the condition start</param>
-        /// <param name="actionsstart">Mark of where all instruction of the body start</param>
-        /// <returns>The AST of de while</returns>
-        public Action WhileAction()
-        {
-            CurrentPosition++;
-            Action Condition = ConditionalOperation();
-            if (MatchCurrent(TokenType.RParen))
-                CurrentPosition++;
-            else
-                ParserError = true;
-            if (!MatchCurrent(TokenType.LCurly))
-                ParserError = true;
-            return new WhileAction(Condition, BodyAction());
-        }
-
-        /// <summary>
-        /// Method in charge of create the AST of the for function
-        /// </summary>
-        /// <param name="reference">The object that wich all object from context have to get the type</param>
-        /// <param name="context">The collection of object where the body will do their instructions</param>
-        /// <returns>The AST of the for function</returns>
-        public Action ForAction()
-        {
-            Token Object = ForHeadObject();
-            CurrentPosition++;
-            if (MatchCurrent(TokenType.In))
-                CurrentPosition++;
-            Token Context = ForHeadContext();
-            CurrentPosition++;
-            if (MatchCurrent(TokenType.LCurly))
-                CurrentPosition++;
-            else
-                return new ForeachAction(Object, Context, SimpleForCase());
-            return new ForeachAction(Object, Context, BodyAction());
-        }
-
-        /// <summary>
-        /// Archive the variable name wich will be the name that all the objects for the context will be name
-        /// </summary>
-        /// <returns>The token that have the name value and acts like a variable</returns>
-        public Token ForHeadObject()
-        {
-            if (!MatchCurrent(TokenType.Variable))
-                ParserError = true;
-            return Tokens[CurrentPosition];
-        }
-
-        /// <summary>
-        /// Archive the context of the for 
-        /// </summary>
-        /// <returns>The tokens that represent the context where the for will work</returns>
-        public Token ForHeadContext()
-        {
-            if (MatchCurrent(TokenType.Context))
-                ParserError = true;
-            return Tokens[CurrentPosition];
-        }
-
-        /// <summary>
-        /// Case for the For action with only one instruction, at the end the current position stay in the semicolon
-        /// </summary>
-        /// <returns>A list of AST with the action with only one element(instruction)</returns>
-        public List<Action> SimpleForCase()
-        {
-            List<Action> action = new() { Action() };
-            return action;
-        }
-
-        /// <summary>
-        /// Method in charge of the creation of the AST for each action between parenthesis
-        /// </summary>
-        /// <returns>The List of AST that represent each action</returns>
-        public List<Action> BodyAction()
-        {
-            List<Action> actions = new();
-            while (!MatchCurrent(TokenType.RCurly))
-            {
-                if (IsAtEnd())
-                {
-                    ParserError = true;
-                    break;
-                }
-                actions.Add(Action());
-            }
-            return actions;
-        }
-
-        /// <summary>
-        /// Method in charge to return the AST for the variables with they values 
-        /// </summary>
-        /// <param name="TokenPosition">Position of the Token in the list of tokens</param>
-        /// <param name="ValuePosition">The position of the last character value assigned to the token</param>
-        /// <returns>The AST of the variable with their respective value</returns>
-        public Action Asignation(int TokenPosition, int ValuePosition)
-        {
-            return new Asignation(Tokens[TokenPosition], Operation(TokenPosition + 2, ValuePosition));
-        }
-
-        /// <summary>
-        /// Recorre the line of code in search of a ) or a logical operator, in any case creates a AST for the operation
-        /// </summary>
-        /// <returns>The AST for the condition requeriment for the while</returns>
-        public Action ConditionalOperation()
-        {
-            Action FirstElement = Action();
-            if (!MatchCurrent(TokenType.RParen))
-                if (LogicalOperator())
-                    return new BinaryAction(FirstElement, Tokens[CurrentPosition], ConditionalOperation());
                 else
-                    ParserError = true;
-            else
-                ParserError = true;
-            if (IsAtEnd())
-                ParserError = true;
-            return FirstElement;
-
-        }
-
-        /// <summary>
-        /// Says if in the position it is a logical operator
-        /// </summary>
-        /// <returns></returns>
-        public bool LogicalOperator()
-        {
-            if (Tokens[CurrentPosition].Type == TokenType.Equal)
-                return true;
-            if (Tokens[CurrentPosition].Type == TokenType.LessEq)
-                return true;
-            if (Tokens[CurrentPosition].Type == TokenType.MoreEq)
-                return true;
-            if (Tokens[CurrentPosition].Type == TokenType.Less)
-                return true;
-            if (Tokens[CurrentPosition].Type == TokenType.More)
-                return true;
-            if (Tokens[CurrentPosition].Type == TokenType.Or)
-                return true;
-            if (Tokens[CurrentPosition].Type == TokenType.And)
-                return true;
-            return false;
-        }
-
-        /// <summary>
-        /// Method in charge to process the operation that includes (+ - * / ^)
-        /// </summary>
-        /// <param name="start"></param>
-        /// <param name="end"></param>
-        /// <returns>Return the AST of any operation arithmetic</returns>
-        public Action Operation(int start, int end)
-        {
-            int LastLessOperation = start;
-            int LastMediumOperation = start;
-            int LastMoreOperation = start;
-            while (LastLessOperation < end)
-            {
-                if (LessImportantOperator(LastLessOperation))
-                {
-                    return new BinaryAction(Operation(start, LastLessOperation - 1), Tokens[LastLessOperation], Operation(LastLessOperation + 1, end));
-                }
-                LastLessOperation++;
+                    selector.Source = card.OnActivation.Selectors.Last().FinalSource;
             }
-            while (LastMediumOperation < end)
-            {
-                if (MediumImportantOperator(LastMediumOperation))
-                {
-                    return new BinaryAction(Operation(start, LastMediumOperation - 1), Tokens[LastMediumOperation], Operation(LastMediumOperation + 1, end));
-                }
-            }
-            while (LastMoreOperation < end)
-            {
-                if (MoreImportantOperator(LastMediumOperation))
-                {
-                    return new BinaryAction(Operation(start, LastMoreOperation - 1), Tokens[LastMoreOperation], Operation(LastMoreOperation + 1, end));
-                }
-            }
-            return new Variable(Tokens[LastLessOperation]);
+            else throw new Error("Only valid parent source in postaction");
         }
+        else
+            selector.Source = SourceFinder(nameofsource, card.Owner);
 
+        Consume(TokenType.Comma, "Expected a comma ,");
+        Ignore();
 
-        /// <summary>
-        /// Method for the less important operation of a combinade (+ and -)
-        /// </summary>
-        /// <param name="n"></param>
-        /// <returns>True if the position have a less important operator</returns>
-        public bool LessImportantOperator(int n)
+        if (Peek().Type == TokenType.Single)
         {
-            if (Tokens[n].Lexeme == "+" || Tokens[n].Lexeme == "-")
-                return true;
-            return false;
+            Advance();
+            Consume(TokenType.Colon, "Expected declarator :");
+            Consume(TokenType.VariableName, "Expected a bolean value or a boolean variable");
+
+            ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO
+            ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO
+            ///AKI VA EL METODO PARA CALCULAR EL VALOR DEL STRING DEVUELTO POR EL AST FORMADO  
+            object singlevalue = Previous();
+            ///METODO PARA SABER SI ES UN BOOLEANO
+
+            if (singlevalue is bool condition)
+                selector.Single = condition;
+
+            Consume(TokenType.Comma, "Expected a comma ( , )");
+            Ignore();
         }
 
-
-        /// <summary>
-        /// Method for the medium important operator of a combinade (* and /)
-        /// </summary>
-        /// <param name="n"></param>
-        /// <returns>True if the position have a medium important operator</returns>
-        public bool MediumImportantOperator(int n)
-        {
-            if (Tokens[n].Lexeme == "*" || Tokens[n].Lexeme == "/")
-                return true;
-            return false;
-        }
+        Consume(TokenType.Predicate, "Expected the start of the definition for Predicate");
+        Consume(TokenType.Colon, "Expected declarator :");
+        Consume(TokenType.LParen, "Expected start of definition of the variable for predicate action ( ( )");
+        Consume(TokenType.VariableName, "Expected a valid variable definition for the predicate");
+        Consume(TokenType.RParen, "Expected end of definition of the variable for predicate action ( ) )");
+        Consume(TokenType.Arrow, "Expected the indicator for the start of the predicate definition ( => ) ");
 
 
-        /// <summary>
-        /// Method for the more important operator of a combinade (^)
-        /// </summary>
-        /// <param name="n"></param>
-        /// <returns>True if in the position have a more important operator</returns>
-        public bool MoreImportantOperator(int n)
-        {
-            if (Tokens[n].Lexeme == "^")
-                return true;
-            return false;
-        }
-     */
+        List<Card> predicateresultlist = new();
+        Card predicate = new();
+
+        ///AKI VA UN METODO ESPECIAL PARA CALCULAR LA ENTRADA DESCRITA EN LAS LINEAS SIGUIENTES DEL CODIGO FUENTE
+        ///AKI VA UN METODO ESPECIAL PARA CALCULAR LA ENTRADA DESCRITA EN LAS LINEAS SIGUIENTES DEL CODIGO FUENTE
+        ///AKI VA UN METODO ESPECIAL PARA CALCULAR LA ENTRADA DESCRITA EN LAS LINEAS SIGUIENTES DEL CODIGO FUENTE
+
+        ///TENGO DE IDEA ALGO COMO UN FOREACH CARTA EN LA SOURCE REALIZAR ESTE METODO DIFERENTE PARA CADA CARTA
+        ///TENGO DE IDEA ALGO COMO UN FOREACH CARTA EN LA SOURCE REALIZAR ESTE METODO DIFERENTE PARA CADA CARTA
+        ///TENGO DE IDEA ALGO COMO UN FOREACH CARTA EN LA SOURCE REALIZAR ESTE METODO DIFERENTE PARA CADA CARTA
+
+        Ignore();
+
+        Consume(TokenType.RCurly, "Expected end of definition for the Selector ( } )");
+
+        selector.FinalSource = predicateresultlist;
+        ///AKI VA UN METODO Q DEVUELVE UN OBJECT, LE HAGO UN : object is List<CARD>, Y CONTINUO
+
+        return selector;
+    }
+
+    #endregion
 
     #region Methods to recorre the tokens list
     /// <summary>
@@ -894,12 +684,12 @@ class Parser
     /// <summary>
     /// Advances to the next token in the tokens list
     /// </summary>
-    /// <returns>The token in the previous position</returns>
-    public Token Advance()
+    public void Advance()
     {
         if (!IsAtEnd())
             CurrentPosition++;
-        return Previous();
+        else
+            throw new Error("Invalid source");
     }
 
     /// <summary>
@@ -907,12 +697,11 @@ class Parser
     /// </summary>
     /// <param name="type"></param>
     /// <param name="errormesage"></param>
-    /// <returns>The consume token</returns>
     /// <exception cref="Error"></exception>
-    public Token Consume(TokenType type, string errormesage)
+    public void Consume(TokenType type, string errormesage)
     {
-        if (Advance().Type == type)
-            return Advance();
+        if (Peek().Type == type)
+            Advance();
         throw new Error(errormesage + " after " + Previous().Lexeme + "  at  " + CurrentPosition.ToString());
     }
 
@@ -921,19 +710,19 @@ class Parser
     /// </summary>
     public void Ignore()
     {
-        while (Peek().Type == TokenType.LineChange)
+        while (Peek().Type == TokenType.LineChange || IsAtEnd())
             CurrentPosition++;
     }
     #endregion
 
-
+    #region Helper Method For Parse
     /// <summary>
     /// Cheks the value object for the type admisible of a variable
     /// </summary>
     /// <param name="value"></param>
     /// <returns>The variable type acord to the value of the object</returns>
     /// <exception cref="Error"></exception>
-    public VariableType FindVariableType(object value)
+    public VariableType FindTypeValue(object value)
     {
         switch (value)
         {
@@ -951,6 +740,55 @@ class Parser
                 break;
         }
         throw new Error("Not defined type");
+    }
+
+    /// <summary>
+    /// For validate the params diccionary
+    /// </summary>
+    /// <param name="token"></param>
+    /// <returns>The type accord to the token declaration (token type string returns string)</returns>
+    /// <exception cref="Error"></exception>
+    public VariableType FindVariableType(Token token)
+    {
+        switch (token.Type)
+        {
+            case TokenType.Bool:
+                return VariableType.Boolean;
+
+            case TokenType.Number:
+                return VariableType.Number;
+
+            case TokenType.String:
+                return VariableType.String;
+
+            default:
+                throw new Error("Not defined type");
+        }
+    }
+
+    /// <summary>
+    /// Cheks the variabletype for a primitive value
+    /// </summary>
+    /// <param name="variableType"></param>
+    /// <returns>The primitive value accord to the variable type (ejemp number primitive value is 0)</returns>
+    /// <exception cref="Error"></exception>
+    public object FindTypeVariable(VariableType variableType)
+    {
+        switch (variableType)
+        {
+            case VariableType.Number:
+                return 0;
+
+            case VariableType.Boolean:
+                return false;
+
+            case VariableType.String:
+                return "";
+
+            default:
+                throw new Error("No va a pasar esto");
+        }
+
     }
 
     /// <summary>
@@ -974,35 +812,6 @@ class Parser
     }
 
     /// <summary>
-    /// Cheks if the effect already exist
-    /// </summary>
-    /// <param name="name"></param>
-    /// <returns>True if the effect do not exist in the context and false if the effect exist</returns>
-    public bool UnicEffect(string name)
-    {
-        foreach (var item in EffectScope.Effects)
-            if (item.Key == name)
-                return false;
-        return true;
-    }
-
-
-
-    /// <summary>
-    /// Search the effect in the Effect Scope
-    /// </summary>
-    /// <param name="name">The name of the required effect</param>
-    /// <returns>The effect founded if it not exist throw an error</returns>
-    /// <exception cref="Error"></exception>
-    public Effect SearchEffect(string name)
-    {
-        if (EffectScope.Effects.ContainsKey(name))
-            return EffectScope.Effects[name];
-
-        throw new Error("Effect Error 404");
-    }
-
-    /// <summary>
     /// Checks if the effect calls have the same params has the definition
     /// </summary>
     /// <param name="namevariable">The name of the variable</param>
@@ -1011,20 +820,19 @@ class Parser
     /// <returns>True if it have the same paramas propetys the call and the definition</returns>
     public bool CorrectParmas(string variablename, object variablevalue, Effect effect)
     {
-        if (effect.Variables.ContainsKey(variablename))
-            if (effect.Variables[variablename] == FindVariableType(variablevalue))
+        if (effect.Params.ContainsKey(variablename))
+            if (effect.Params[variablename] == FindTypeValue(variablevalue))
                 return true;
 
         throw new Error("Incorrect definition of variable name or type");
     }
-
 
     /// <summary>
     /// Metodo sencillo para validar la source
     /// </summary>
     /// <param name="nameofsource"></param>
     /// <param name="owner"></param>
-    /// <returns>La source correspondiente a la entrada, si no se encuentra entre las definidas lanza un error</returns>
+    /// <returns>La source correspondiente a la entrada, si no se encuentra entre las definidas lanza un error, la source parent no es admisible</returns>
     /// <exception cref="Error"></exception>
     public List<Card> SourceFinder(string nameofsource, Player owner)
     {
@@ -1065,98 +873,55 @@ class Parser
 
     }
 
-
-
-
-    //EMPEZO LO CHIDO A CREAR ARBOLES
-    //
-    //IDEA PARA EL SCOPE
-    //CREO UNA LISTA DE TUPLAS DE VARIABLES CON SU VALOR Q SERIA UN OBJET
-    //ESTA LISTA SERIA GLOBAL Y TODOS TENDRIAN ACCESO A ELLA
-    // PERO LA LSITA FUNCIONA COMO UNA PILA
-    //AGREGO COSAS DE IZQUIERDA A DERECHA DONDE LO DE MAS A LA IZQUIERDA ES LO MAS ANTIGUO
-    //Y SERA LO ULTIMO EN ACCEDER, SI HAY DOS VARIABLES CON EL MISMO NOMBRE PODRIA HACER ALGO COMO Q SE GUARDE LA POSICION
-    //DE DONDE EN LA LISTA SERIA UN NUEVO CONTEXTO
-    //PERO BASICAMENTE SI QUISIERA ACCEDER A UNA VARIABLE SOLO RECORRERIA LA LISTA DE DERECHA A IZQUIERDA Y LA PRIMERA 
-    //VARIABLE Q TENGA EL MISMO NOMBRE ACCEDO AL VALOR
-
-    //VOLVIENDO A LA IDEA DE DICCIONARIO DE NOMBRE VALOR SE ME ACABA DE OCURRIR COMO IMPLEMENTARLO
-    //SENCILLO
-    //YA TENGO EL DICCIONARIO ESTATICO DE VARIABLES 
-    //SOLO TENGO Q DECIR Q EN CADA CONTEXTO CREAR UN DICCIONARIO NUEVO CON LOS ELEMENTOS DEL ANTERIOR
-    //Y A TODOS LOS METODOS LES PASO ESE DICCIOARIO NUEVO
-    //EL PROBLEMA CREO Q ESTA SI EL CODIGO BASE CUBRIRA TODAS LAS POSIBLES COMBINACIONES DE CODIGO Q PUEDAN PASAR 
-    //ESA ES MI UNICA PREOCUPACION
-
-    //YASE Q HACER
-    //LOS UNICOS Q NECESITAN LLEVAR UN CONTEXT SON LOS WHILE LOS FOR Y LOS ACTION(EFECTOS DE CARTAS)
-    //SI ESTOS SON LOS UNICOS Q LO NECESITAN LO UNICO Q TENGO Q HACER ES Q ELLOS TENGAN ESA PROPIEDAD
-    //LES PONGO A CADA UNO UNA PROPIEDAD DE UN CONTEXT(DICCIONARIO DE VARIABLES) Y CON ESO DEBO RESOLVER EL PROBLEMA
-    //A CADA UNO LES PASO COMO PARAMETRO UN CONTEXT PARA PODER CREARLO 
-    //Y CON ESO DEBE ARREGLARSE
-
-    //SIGO TENIENDO PROBLEMAS CON LOS METODOS RESERVADOS
-
-
-    //           AAA               SSSSSSSSSSSS     TTTTTTTTTTTTTTT                      
-    //         AAA AAA          SSSSSSSS            TTTTT TTT TTTTT     
-    //        AAA   AAA           SSSSSSS           TTT   TTT   TTT       
-    //      AAA     AAA              SSSSSSS        TT    TTT    TT            
-    //      AAA       AAA                SSSSSSS    T     TTT     T             
-    //     AAAAAAAAAAAAAAA             SSSSSSS            TTT             
-    //    AAA           AAA     SSSSSSSSSSSS              TTT          
-
-    /*    
-
-public string StringDeterminate()
-{
-    List<Token> Operation = new();
-    while (Peek().Type == TokenType.Comma || Peek().Type == TokenType.LineChange)
+    /// <summary>
+    /// Un metodo sencillo para saber si se llego al final de una linea de operacion o asignacion
+    /// </summary>
+    /// <returns>True si se encuentra algunas de los tokens q terminan una operacion( ejemplo ; o , o ) )</returns>
+    public bool OperationEnd()
     {
         if (IsAtEnd())
-            throw new Error("Not valid operation");
-        Operation.Add(Peek());
-        Advance();
+            throw new Error("Not valid operation operation at end");
+
+        if (Peek().Type == TokenType.Comma || Peek().Type == TokenType.LineChange || Peek().Type == TokenType.RCurly || Peek().Type != TokenType.Semicolon)
+            return true;
+
+        return false;
     }
-    return CalculateString(Operation);
-}
 
- */
-
-    public object Evaluate(object expected)
+    /// <summary>
+    /// Exctracts from a list of tokens one sub list of tokens         
+    /// </summary>
+    /// <param name="tokens">The token list to extract the sub list</param>
+    /// <param name="start">The position where begin the extraction of the original list </param>
+    /// <param name="end">The position where end the extraction of the original list</param>
+    /// <returns>Return the sub list from start to end</returns>
+    /// <exception cref="Error"></exception>
+    public List<Token> SubList(List<Token> tokens, int start, int end)
     {
+        List<Token> tokens1 = new();
 
-        List<Token> tokens = new();
-        while (Peek().Type != TokenType.Comma || Peek().Type != TokenType.LineChange || Peek().Type != TokenType.RCurly)
-        {
-            if (IsAtEnd())
-                throw new Error("Wrong implementation of operation");
+        if (start < 0 || start > tokens.Count || end < 0 || end > tokens.Count)
+            throw new Error("Wrong implementation of operation");
 
-            tokens.Add(Peek());
-            Advance();
-        }
+        for (int i = start; i <= end; i++)
+            tokens1.Add(tokens[i]);
 
-        Action operation = Calculate(tokens);
-
-        if (operation is BinaryAction)
-        {
-            //((BinaryAction)operation)
-
-
-        }
-        else if (operation is UnaryAction)
-        {
-
-        }
-        throw new Error("");
+        return tokens1;
     }
 
-    //5 + 4 devolver 9 CReo q funciona Panga revisar
-    //esta operacion tiene q ser recursiva
+    #endregion
+
+    /// <summary>
+    /// Metodo para devolver cualquier operacion binaria q se le pueda cruzar
+    /// </summary>
+    /// <param name="action"></param>
+    /// <param name="variables"></param>
+    /// <returns>El valor del calculo de la operacion binaria</returns>
+    /// <exception cref="Error"></exception>
     public Token ReturnValueBinary(Action action)
     {
-        if (action is Atom variable)
-            return variable.Id;
+        if (action is PrimitiveAtom primitivevalue)
+            return primitivevalue.PrimitiveValue;
 
         if (action is BinaryAction binaryAction)
 
@@ -1169,35 +934,34 @@ public string StringDeterminate()
                 case TokenType.Pow:
                     {
                         if (!double.TryParse(ReturnValueBinary(binaryAction.Left).Lexeme, out double left))
-                            throw new Error("Expected a number");
+                            throw new Error("You can only use mathematic operators with numbers");
 
                         if (!double.TryParse(ReturnValueBinary(binaryAction.Right).Lexeme, out double right))
-                            throw new Error("Expected a number");
+                            throw new Error("You can only use mathematic operators with numbers");
 
-                        double.TryParse(binaryAction.Operator.Lexeme, out double previousvalue);
 
                         switch (binaryAction.Operator.Type)
                         {
-                            case TokenType.More:
-                                previousvalue = left + right;
+                            case TokenType.Plus:
+                                binaryAction.Operator.Lexeme = (left + right).ToString();
                                 break;
 
                             case TokenType.Minus:
-                                previousvalue = left - right;
+                                binaryAction.Operator.Lexeme = (left - right).ToString();
                                 break;
 
                             case TokenType.Multiply:
-                                previousvalue = left * right;
+                                binaryAction.Operator.Lexeme = (left * right).ToString();
                                 break;
 
                             case TokenType.Divide:
                                 if (right == 0)
                                     throw new Error("Not accepted division by 0");
-                                previousvalue = left / right;
+                                binaryAction.Operator.Lexeme = (left / right).ToString();
                                 break;
 
                             case TokenType.Pow:
-                                previousvalue = Math.Pow(left, right);
+                                binaryAction.Operator.Lexeme = Math.Pow(left, right).ToString();
                                 break;
 
                             default:
@@ -1211,7 +975,7 @@ public string StringDeterminate()
                 case TokenType.Less:
                 case TokenType.LessEq:
                     {
-                        if (ReturnValueBinary(binaryAction.Left).Type == TokenType.NumberValue || ReturnValueBinary(binaryAction.Right).Type == TokenType.NumberValue)
+                        if (ReturnValueBinary(binaryAction.Left).Type == TokenType.NumberValue && ReturnValueBinary(binaryAction.Right).Type == TokenType.NumberValue)
                         {
                             if (!double.TryParse(ReturnValueBinary(binaryAction.Left).Lexeme, out double left))
                                 throw new Error("Expected a number");
@@ -1235,12 +999,17 @@ public string StringDeterminate()
                                     break;
                             }
                         }
+                        else
+                            throw new Error("En una comparacion ambos tienen q ser numeros");
                         break;
                     }
 
                 case TokenType.Equal:
-                    if (ReturnValueBinary(binaryAction.Left).Lexeme == ReturnValueBinary(binaryAction.Right).Lexeme)
-                        binaryAction.Operator.Lexeme = "true";
+                    if (ReturnValueBinary(binaryAction.Left).Type == ReturnValueBinary(binaryAction.Right).Type)
+                        if (ReturnValueBinary(binaryAction.Left).Lexeme == ReturnValueBinary(binaryAction.Right).Lexeme)
+                            binaryAction.Operator.Lexeme = "true";
+                        else
+                            binaryAction.Operator.Lexeme = "false";
                     else
                         binaryAction.Operator.Lexeme = "false";
                     break;
@@ -1263,47 +1032,49 @@ public string StringDeterminate()
         return ((BinaryAction)action).Operator;
     }
 
-    public Token ReturnValueUnary(UnaryAction action)
+    /// <summary>
+    /// Metodo para devolver el valor de un Unary Action
+    /// Y de paso iguala el valor de la variable en su scope
+    /// </summary>
+    /// <param name="action"></param>
+    /// <param name="variable"></param>
+    /// <returns>El valor de ejecutar la operacion ademas de q iguala la variable en el scope asociado</returns>
+    /// <exception cref="Error"></exception>
+    public Token ReturnValueUnary(UnaryAction action, Dictionary<string, object> variable)
     {
-        double.TryParse(action.ID.Lexeme, out double number);
-        if (action.ID.Type == TokenType.NumberValue)
-            switch (action.Operation.Type)
-            {
-                case TokenType.Increment:
-                    action.ID.Lexeme = (number + 1).ToString();
-                    break;
-                case TokenType.Decrement:
-                    action.ID.Lexeme = (number - 1).ToString();
-                    break;
-                default:
-                    throw new Error("Wrong definition for a unary operation");
-            }
-        else if (action.ID.Type == TokenType.VariableName)
+        if (action.ID.Type != TokenType.VariableName)
+            throw new Error("Only valid operation in variables");
+
+        double value = 0;
+
+        if (variable.ContainsKey(action.ID.Lexeme))
         {
-            //AKI ETOY TRABADO
-            //AKI ETOY TRABADO
-            //AKI ETOY TRABADO
-            //AKI ETOY TRABADO
-            //AKI ETOY TRABADO
-            //AKI ETOY TRABADO
-            //AKI ETOY TRABADO
-            //AKI ETOY TRABADO
-            //EL LIO ESE CON Q HAGO LA PINCHA DE SCOPE DE VARIABLES PQ ESO ES LO Q PIENSO HACER
+            if (variable[action.ID.Lexeme] is double valuenumber)
+                value = valuenumber;
+            else
+                throw new Error("This variable is not a number");
         }
         else
-            throw new Error("Not accepted a unary expresion with a operation whitaout a number o variable");
+            throw new Error("This variable do not exist in this context");
 
-        return action.ID;
+        switch (action.Operation.Type)
+        {
+            case TokenType.Increment:
+                action.Operation.Lexeme = (value + 1).ToString();
+                break;
+
+            case TokenType.Decrement:
+                action.Operation.Lexeme = (value - 1).ToString();
+                break;
+
+            default:
+                throw new Error("Wrong definition for a unary operation");
+        }
+
+        variable[action.ID.Lexeme] = double.Parse(action.Operation.Lexeme);
+
+        return action.Operation;
     }
-
-
-
-
-
-
-
-
-
 
     /// <summary>
     /// Parses the operation line searching in order all the posibles operation
@@ -1311,59 +1082,124 @@ public string StringDeterminate()
     /// <param name="tokens"></param>
     /// <returns>The AST with the operation line ready to execute</returns>
     /// <exception cref="Error"></exception>
-    public Action Calculate(List<Token> tokens)
+    public Action Operations(List<Token> tokens)
     {
         if (tokens.Count == 1)
-            return new Atom(tokens[0]);
+            return new PrimitiveAtom(tokens[0]);
+
 
         for (int i = 0; i < tokens.Count; i++)
             if (AndOrOperators(tokens, i))
-                return new BinaryAction(Calculate(SubList(tokens, 0, i - 1)), tokens[i], Calculate(SubList(tokens, 0, i + 1)));
+                return new BinaryAction(Operations(SubList(tokens, 0, i - 1)), tokens[i], Operations(SubList(tokens, i + 1, tokens.Count - 1)));
         for (int i = 0; i < tokens.Count; i++)
             if (LogicalOperator(tokens, i))
-                return new BinaryAction(Calculate(SubList(tokens, 0, i - 1)), tokens[i], Calculate(SubList(tokens, 0, i + 1)));
+                return new BinaryAction(Operations(SubList(tokens, 0, i - 1)), tokens[i], Operations(SubList(tokens, i + 1, tokens.Count - 1)));
+
         for (int i = 0; i < tokens.Count; i++)
             if (LessImportantOperator(tokens, i))
-                return new BinaryAction(Calculate(SubList(tokens, 0, i - 1)), tokens[i], Calculate(SubList(tokens, 0, i + 1)));
+                return new BinaryAction(Operations(SubList(tokens, 0, i - 1)), tokens[i], Operations(SubList(tokens, i + 1, tokens.Count - 1)));
+
         for (int i = 0; i < tokens.Count; i++)
             if (MediumImportantOperator(tokens, i))
-                return new BinaryAction(Calculate(SubList(tokens, 0, i - 1)), tokens[i], Calculate(SubList(tokens, 0, i + 1)));
+                return new BinaryAction(Operations(SubList(tokens, 0, i - 1)), tokens[i], Operations(SubList(tokens, i + 1, tokens.Count - 1)));
         for (int i = 0; i < tokens.Count; i++)
             if (MoreImportantOperator(tokens, i))
-                return new BinaryAction(Calculate(SubList(tokens, 0, i - 1)), tokens[i], Calculate(SubList(tokens, 0, i + 1)));
+                return new BinaryAction(Operations(SubList(tokens, 0, i - 1)), tokens[i], Operations(SubList(tokens, i + 1, tokens.Count - 1)));
 
         for (int i = 0; i < tokens.Count; i++)
             if (IncreDecrement(tokens, i))
-            {
-                if (tokens[i - 1].Type != TokenType.VariableName || tokens.Count != 2)
-                    throw new Error("Not valid Operation");
-            }
-            else return new UnaryAction(tokens[i - 1], tokens[i]);
+                return new UnaryAction(tokens[i - 1], tokens[i]);
 
         throw new Error("Not valid Operation");
     }
 
-
     /// <summary>
-    /// Exctracts from a list of tokens one sub list of tokens         
+    /// Metodo para devolver cualquier objeto posible de devolver por el context (empieza cuando encuentra un context)
+    /// Esto me servira despues
     /// </summary>
-    /// <param name="tokens">The token list to extract the sub list</param>
-    /// <param name="start">The position where begin the extraction of the original list </param>
-    /// <param name="end">The position where end the extraction of the original list</param>
-    /// <returns>Return the sub list from start to end</returns>
+    /// <param name="tokens"></param>
+    /// <returns>El objeto resultante</returns>
     /// <exception cref="Error"></exception>
-    public List<Token> SubList(List<Token> tokens, int start, int end)
+    public object ContextPosibleObjects(Dictionary<string, object> variables)
     {
-        List<Token> tokens1 = new();
+        if (Peek().Type != TokenType.Point)
+            throw new Error("Expected after context a point");
 
-        if (start < 0 || start > tokens.Count || end < 0 || end > tokens.Count)
-            throw new Error("Wrong implementation of operation");
+        Advance();
 
-        for (int i = start; i < end; i++)
-            tokens1.Add(tokens[i]);
+        //AKI VA UN METODO PARA CALCULAR EL PLAYER DE LOS METODOS Q REQUIEREN PLAYER
+        Player player = new();
 
-        return tokens1;
+        switch (Peek().Type)
+        {
+            case TokenType.TriggerPlayer:
+                return Context.TriggerPlayer();
+
+            case TokenType.Board:
+                return Context.Board();
+
+            case TokenType.Hand:
+                return Context.TriggerPlayer().Hand.Hand;
+
+            case TokenType.Field:
+                return Context.TriggerPlayer().FieldofPlayer();
+
+            case TokenType.Graveyard:
+                return Context.TriggerPlayer().Grave.DeadCards;
+
+            case TokenType.Deck:
+                return Context.TriggerPlayer().Deck.PlayerDeck;
+
+            case TokenType.HandOfPlayer:
+                Advance();
+                if (Peek().Type != TokenType.RParen)
+                    throw new Error("Expected a paren opener");
+                Advance();
+                if (Peek().Type != TokenType.LParen)
+                    throw new Error("Expected a paren closer");
+                //AKI VA UN METODO PARA CALCULAR EL PLAYER DE LOS METODOS Q REQUIEREN PLAYER
+                return Context.HandofPlayer(player);
+
+            case TokenType.GraveyardOfPlayer:
+                Advance();
+                if (Peek().Type != TokenType.RParen)
+                    throw new Error("Expected a paren opener");
+                Advance();
+                if (Peek().Type != TokenType.LParen)
+                    throw new Error("Expected a paren closer");
+                //AKI VA UN METODO PARA CALCULAR EL PLAYER DE LOS METODOS Q REQUIEREN PLAYER
+                return Context.GraveyardofPlayer(player);
+
+            case TokenType.DeckOfPlayer:
+                Advance();
+                if (Peek().Type != TokenType.RParen)
+                    throw new Error("Expected a paren opener");
+                Advance();
+                if (Peek().Type != TokenType.LParen)
+                    throw new Error("Expected a paren closer");
+                //AKI VA UN METODO PARA CALCULAR EL PLAYER DE LOS METODOS Q REQUIEREN PLAYER
+                return Context.DeckofPlayer(player);
+
+            case TokenType.FieldOfPlayer:
+                Advance();
+                if (Peek().Type != TokenType.RParen)
+                    throw new Error("Expected a paren opener");
+                Advance();
+                if (Peek().Type != TokenType.LParen)
+                    throw new Error("Expected a paren closer");
+                //AKI VA UN METODO PARA CALCULAR EL PLAYER DE LOS METODOS Q REQUIEREN PLAYER
+                return Context.FieldofPlayer(player);
+
+            default:
+                break;
+
+        }
+        throw new Error("Not valid output after context");
+
     }
+
+    #region  Operators Founder
+
 
     /// <summary>
     /// Says if in the position it is a logical operator
@@ -1444,9 +1280,165 @@ public string StringDeterminate()
         return false;
     }
 
+    #endregion
+
+    /// <summary>
+    /// Metodo para actualizar el valor de las variables en su anterior scope
+    /// </summary>
+    /// <param name="variables"></param>
+    /// <param name="localvariables"></param>
+    public void ReturnOriginalValue(Dictionary<string, object> variables, Dictionary<string, object> localvariables)
+    {
+        foreach (string variable in localvariables.Keys)
+            if (variables.ContainsKey(variable))
+                variables[variable] = localvariables[variable];
+    }
+
+
+    /// <summary>
+    /// El encargado de devolver cada posible instruccion del juego
+    /// </summary>
+    /// <param name="variables"></param>
+    /// <returns>El arbol correspondiente a cada instruccion</returns>
+    /// <exception cref="Error"></exception>
+    public Action ActionConstructor(Dictionary<string, object> variables)
+    {
+
+        if (Peek().Type == TokenType.While)
+        {
+            Dictionary<string, object> localvariables = new(variables);
+            ///Aki va todo el codigo a ejecutar
+            ReturnOriginalValue(variables, localvariables);
+        }
+        else
+        if (Peek().Type == TokenType.For)
+        {
+            Dictionary<string, object> localvariables = new(variables);
+
+
+            ReturnOriginalValue(variables, localvariables);
+        }
+        else
+        ////Caso de instrucciones simples
+        {
+            List<Token> instruction = ParserInstructions();
+
+            for (int i = 0; i < instruction.Count; i++)
+                if (instruction[i].Type == TokenType.Assign)
+                    return EqualCase(SubList(instruction, 0, i - 1), SubList(instruction, i + 1, instruction.Count - 1));
+
+            for (int i = 0; i < instruction.Count; i++)
+            {
+
+            }
+
+        }
+        throw new Error("Not valid Action to execute");
+    }
+
+    /// <summary>
+    /// Metodo para guardar cualquier instruccion simple q termine en un ;
+    /// </summary>
+    /// <returns>Una lista de tokens q representa la cadena de instruccion</returns>
+    /// <exception cref="Error"></exception>
+    public List<Token> ParserInstructions()
+    {
+        List<Token> tokens = new();
+        while (Peek().Type != TokenType.Semicolon)
+        {
+            tokens.Add(Peek());
+            Advance();
+
+            if (IsAtEnd() || Peek().Type == TokenType.LineChange)
+                throw new Error("Not valid operation");
+        }
+
+        if (tokens.Count == 0)
+            throw new Error("Not valid operation");
+
+        return tokens;
+    }
+
+
+    public ObjectAsignation EqualCase(List<Token> idvalue, List<Token> finalvalue)
+    {
+        return new ObjectAsignation(PrimitiveAction(idvalue), PrimitiveAction(finalvalue));
+    }
+
+    public Action PrimitiveAction(List<Token> instruction)
+    {
+        if (instruction.Count == 1)
+            return new PrimitiveAtom(instruction[0]);
+
+        List<Token> refined = new(instruction);
+
+
+
+        return new MethodExecution(refined);
+    }
+
+
+    public void Refinated(List<Token> tokens, int n)
+    {
+        switch (tokens[n].Type)
+        {
+
+            case TokenType.Context:
+                n++;
+                if (tokens[n].Type != TokenType.Point)
+                    throw new Error("Expected the invoke of method");
+                tokens.RemoveAt(n);
+                break;
+
+            case TokenType.Hand:
+            case TokenType.Deck:
+            case TokenType.Graveyard:
+            case TokenType.Field:
+            case TokenType.VariableName:
+                n++;
+                if (tokens[n].Type == TokenType.Point)
+                    tokens.RemoveAt(n);
+                else
+                if (tokens[n].Type == TokenType.LBracket)
+                    tokens.RemoveAt(n);
+                else
+                    throw new Error("Not expected after a Hand implementation");
+                break;
+
+            case TokenType.RBracket:
+            case TokenType.RCurly:
+            case TokenType.RParen:
+                tokens.RemoveAt(n);
+                break;
+
+            default:
+                break;
+        }
+
+    }
 
 
 
 
 
+
+
+
+
+    public void Pruebaparse()
+    {
+        List<Token> operation = new();
+        while (OperationEnd())
+        {
+            operation.Add(Peek());
+            Advance();
+
+        }
+        foreach (var item in operation)
+            System.Console.WriteLine(item.Lexeme);
+
+        actionfortest = Operations(operation);
+        System.Console.WriteLine(ReturnValueBinary(actionfortest).Lexeme);
+
+    }
 }

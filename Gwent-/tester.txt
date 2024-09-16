@@ -1,0 +1,4 @@
+prueba
+10 + 4 == "14" || true;
+prueba
+1+2 ;
