@@ -3,31 +3,52 @@ using TokenClass;
 public abstract class Action { }
 
 /// <summary>
-/// AST for operation with two element(+ - / * ||)
+/// Representation of a AST for operation with two element(+ > ||)
 /// </summary>
 public class BinaryAction : Action
 {
-    public Action Left { get; }
-    public Token Operator { get; }
-    public Action Right { get; }
+    public List<Action> Terms { get; set; } = new();
+    public List<TokenType> Operators { get; set; } = new();
 
-    public BinaryAction(Action left, Token Operator, Action right)
+    public BinaryAction() { }
+    public BinaryAction(Action action)
     {
-        this.Operator = Operator;
-        Right = right;
-        Left = left;
+        if (action is BinaryAction binaryAction)
+        {
+            Terms.AddRange(binaryAction.Terms);
+            Operators.AddRange(binaryAction.Operators);
+        }
+        else
+            Terms.Add(action);
+
     }
+
+    public void Complete(Action action)
+    {
+        if (action is BinaryAction binaryAction)
+        {
+            Terms.AddRange(binaryAction.Terms);
+            Operators.AddRange(binaryAction.Operators);
+        }
+        else
+            Terms.Add(action);
+
+    }
+
+
+
 }
+
 
 /// <summary>
 /// case of actions that only needs a one parametrs(++ and --)
 /// </summary>
 public class UnaryAction : Action
 {
-    public Token ID { get; }
+    public Action ID { get; }
     public Token Operation { get; }
 
-    public UnaryAction(Token id, Token op)
+    public UnaryAction(Action id, Token op)
     {
         ID = id;
         Operation = op;
@@ -40,25 +61,13 @@ public class UnaryAction : Action
 public class ObjectAsignation : Action
 {
     public Action ID { get; set; } //Id stands for identificator
+    public Token AssignType { get; set; }
     public Action Value { get; set; }
 
-    public ObjectAsignation(Action id, Action value)
+    public ObjectAsignation(Action id, Token token, Action value)
     {
         ID = id;
-        Value = value;
-    }
-}
-
-/// <summary>
-/// The asignation tree of a variable 
-/// </summary>
-public class VariableAsignation : Action
-{
-    public string Name { get; }  //The name unique of each variable
-    public Token Value { get; } //Represent the actions to determinate the value
-    public VariableAsignation(string name, Token value)
-    {
-        Name = name;
+        AssignType = token;
         Value = value;
     }
 }
@@ -87,17 +96,17 @@ public class WhileAction : Action
 
 public class ForeachAction : Action
 {
-    public Card Reference { get; }
+    public string Reference { get; }
 
-    public List<Card> Targets { get; }
+    public string Targets { get; }
 
-    public List<Action> Actions { get; }
+    public List<Action> Body { get; }
 
-    public ForeachAction(Card reference, List<Card> targets, List<Action> actions)
+    public ForeachAction(string reference, string targets, List<Action> actions)
     {
         Reference = reference;
         Targets = targets;
-        Actions = actions;
+        Body = actions;
     }
 }
 
@@ -105,35 +114,42 @@ public class ActionInstruction : Action
 {
     public List<Card> Targets { get; } = new();
     public List<Action> Body { get; }
-    public ActionInstruction(List<Card> targets, List<Action> body)
+    public ActionInstruction(List<Action> body)
     {
-        Targets = targets;
         Body = body;
     }
 }
 
-public class MethodExecution : Action
+public class InstructionExecution : Action
 {
-    public Token FirstReference { get; set; }
+    public Action FirstReference { get; set; }
     public Action LaterReference { get; set; }
 
-    public MethodExecution(List<Token> tokens)
+    public InstructionExecution(Action firstreference, Action laterReference)
     {
-        if (tokens.Count == 2)
-        {
-            FirstReference = tokens[1];
-            LaterReference = new LaterReference(tokens[0]);
-        }
-
-        FirstReference = tokens[tokens.Count - 1];
-        tokens.RemoveAt(tokens.Count - 1);
-        LaterReference = new MethodExecution(tokens);
-
+        FirstReference = firstreference;
+        LaterReference = laterReference;
     }
 }
+public class MethodCall : Action
+{
+    public Token Instruction { get; set; }
+    public Action? Params { get; set; }
+    public string? Index { get; set; }
 
-public class LaterReference : Action
+    public MethodCall(Token instruction) => Instruction = instruction;
+    public void ParamsCreation(Action parmas) => Params = parmas;
+    public void Indexation(string index) => Index = index;
+}
+
+public class Predicate : Action
 {
     public Token Reference { get; set; }
-    public LaterReference(Token token) => Reference = token;
+    public Action Condition { get; set; }
+
+    public Predicate(Token reference, Action condition)
+    {
+        Reference = reference;
+        Condition = condition;
+    }
 }

@@ -1,4 +1,4 @@
-public static class Context
+public class Context
 {
     public static Player Player1 { get; set; } = new Player("Player1");
     public static Player Player2 { get; set; } = new Player("Player2");

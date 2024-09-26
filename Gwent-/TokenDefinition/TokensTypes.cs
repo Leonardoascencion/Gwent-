@@ -31,9 +31,13 @@ public enum TokenType
     GraveyardOfPlayer, // grave of player
     Targets, // targets
     Context, // context
+    CardValue, // card
+    ListofCardValue, // List of card
+    PlayerValue, // player
     NumberValue, // NumberValue (when find a number)
     WordValue, // WordValue (when find a word between "")
     BoleanValue, // Bool Value (when find true or false)
+    NullValue, // Null
 
     //Especial methods 
     TriggerPlayer, // TriggerPlayer 
@@ -44,6 +48,7 @@ public enum TokenType
     Remove, // Remove 
     Shuffle, // Shuffle 
     Owner, //Owner 
+    Add, //Add
 
     //Actions
     For, // for

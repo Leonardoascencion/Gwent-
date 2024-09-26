@@ -3,10 +3,12 @@ string errormesage = "";
 try
 {
     Lexer lexer = new(File.ReadAllText(@"tester.txt"));
+
+    foreach (var item in Lexer.Tokens)
+        System.Console.WriteLine(item.Type + " " + item.Lexeme);
+
     System.Console.WriteLine("empieza el parser");
     Parser parser = new Parser();
-    if (parser.actionfortest is BinaryAction binaryAction)
-        Console.WriteLine(binaryAction.Operator.Lexeme);
     System.Console.WriteLine("termino el parser");
 }
 catch (Error e)
@@ -19,6 +21,7 @@ catch (Exception e)
     errormesage = e.Message;
 }
 System.Console.WriteLine(errormesage);
+
 
 
 

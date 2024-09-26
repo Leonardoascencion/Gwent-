@@ -27,7 +27,7 @@ public class Lexer
     /// </summary>
     public void Tokeny()
     {
-        Regex match = new(@"(?:[-]|[\s () {} +* /%^;.,:<>|=|&!$'\""]|\n)");
+        Regex match = new(@"(?:[-]|[]|[\s () {} +* /%^;.,:<>|=|&!$'\""]|\n)");
         MatchCollection TheMatch = match.Matches(Source);
 
 
@@ -96,7 +96,7 @@ public class Lexer
                     Tokens.Add(new Token(TokenType.Effect, CurrentWord));
                     break;
 
-                case "card":
+                case "Card":
                     Tokens.Add(new Token(TokenType.Card, CurrentWord));
                     break;
 
@@ -212,6 +212,10 @@ public class Lexer
                     Tokens.Add(new Token(TokenType.Push, CurrentWord));
                     break;
 
+                case "Add":
+                    Tokens.Add(new Token(TokenType.Add, CurrentWord));
+                    break;
+
                 case "Sendbottom":
                     Tokens.Add(new Token(TokenType.SendBottom, CurrentWord));
                     break;
@@ -232,8 +236,10 @@ public class Lexer
                     Tokens.Add(new Token(TokenType.Owner, CurrentWord));
                     break;
 
+                case "True":
                 case "true":
                 case "false":
+                case "False":
                     Tokens.Add(new Token(TokenType.BoleanValue, CurrentWord));
                     break;
 
@@ -396,14 +402,12 @@ public class Lexer
                     }
                     break;
 
+                case "@@":
+                    Tokens.Add(new Token(TokenType.SpaceConcatenation, CurrentWord));
+                    break;
+
                 case "@":
-                    if (Source[CurrentPosition + 1] == '@')
-                    {
-                        CurrentWord += Source[CurrentPosition + 1];
-                        Tokens.Add(new Token(TokenType.SpaceConcatenation, CurrentWord));
-                    }
-                    else
-                        Tokens.Add(new Token(TokenType.Concatenation, CurrentWord));
+                    Tokens.Add(new Token(TokenType.Concatenation, CurrentWord));
                     break;
 
                 case ".":
